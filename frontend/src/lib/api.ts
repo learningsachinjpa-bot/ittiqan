@@ -4,6 +4,7 @@ import type {
 } from '../types'
 
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api/v1'
+export const getApiBase = () => BASE
 
 function getToken() {
   return localStorage.getItem('ittiqan_access_token')
@@ -272,15 +273,23 @@ export interface ObsMetrics {
   total_tokens: number; total_cost_usd: number; throughput_per_hour: number
 }
 
+export interface AlertChannel {
+  type: 'email' | 'webhook'
+  address?: string   // for email
+  url?: string       // for webhook
+  label?: string     // optional friendly name
+}
+
 export interface ObsAlert {
   id: string; name: string; agent_id?: string; severity: string
   condition_type: string; condition_threshold: number
   is_active: boolean; triggered_count: number; last_triggered_at?: string
+  notification_channels?: AlertChannel[]
 }
 
 interface AlertCreateBody {
   name: string; condition_type: string; condition_threshold: number
-  severity?: string; agent_id?: string; notification_channels?: unknown[]
+  severity?: string; agent_id?: string; notification_channels?: AlertChannel[]
 }
 
 export const observability = {
@@ -295,6 +304,11 @@ export const observability = {
     request<{ id: string }>('/observability/alerts', { method: 'POST', body: JSON.stringify(body) }),
   deleteAlert: (id: string) =>
     request<{ success: boolean }>(`/observability/alerts/${id}`, { method: 'DELETE' }),
+  updateAlertChannels: (id: string, channels: Array<{ type: string; address?: string; url?: string }>) =>
+    request<{ id: string; notification_channels: Array<{ type: string; address?: string; url?: string }> }>(
+      `/observability/alerts/${id}/channels`,
+      { method: 'PATCH', body: JSON.stringify({ notification_channels: channels }) }
+    ),
   evaluateAlerts: (agentId?: string) =>
     request<{ fired_count: number; fired: Array<{ alert_id: string; alert_name: string; condition_type: string; threshold: number; metric_value: number }> }>(
       `/observability/alerts/evaluate${agentId ? `?agent_id=${agentId}` : ''}`,

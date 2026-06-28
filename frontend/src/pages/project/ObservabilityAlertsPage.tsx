@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { observability } from '../../lib/api'
-import type { ObsAlert } from '../../lib/api'
+import type { ObsAlert, AlertChannel } from '../../lib/api'
 
 const SEV_COLOR: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700',
@@ -25,7 +25,7 @@ const COND_UNITS: Record<string, string> = {
 const COND_HINTS: Record<string, string> = {
   error_rate: 'Fires when error + timeout % exceeds this value over the last 30 min',
   latency_spike: 'Fires when average latency_ms exceeds this value over the last 30 min',
-  score_drop: 'Coming soon — will fire when eval score drops below this value',
+  score_drop: 'Fires when the most recent completed evaluation score drops below this value (0.0–1.0)',
 }
 
 interface FiredResult {
@@ -47,6 +47,11 @@ export default function ObservabilityAlertsPage() {
   const [evaluating, setEvaluating] = useState(false)
   const [evalResult, setEvalResult] = useState<{ fired: FiredResult[]; fired_count: number } | null>(null)
   const [fetchError, setFetchError] = useState('')
+  const [channelAlertId, setChannelAlertId] = useState<string | null>(null)
+  const [channelType, setChannelType] = useState<'email' | 'webhook'>('email')
+  const [channelValue, setChannelValue] = useState('')
+  const [channelSaving, setChannelSaving] = useState(false)
+  const [channelError, setChannelError] = useState('')
 
   function load() {
     setLoading(true)
@@ -87,6 +92,40 @@ export default function ObservabilityAlertsPage() {
     if (!confirm('Delete this alert?')) return
     await observability.deleteAlert(id)
     load()
+  }
+
+  async function handleAddChannel(alertId: string) {
+    if (!channelValue.trim()) { setChannelError('Enter a value'); return }
+    const alert = alerts.find(a => a.id === alertId)
+    if (!alert) return
+    const existing: AlertChannel[] = alert.notification_channels ?? []
+    const newChannel: AlertChannel = channelType === 'email'
+      ? { type: 'email', address: channelValue.trim() }
+      : { type: 'webhook', url: channelValue.trim() }
+    const updated = [...existing, newChannel]
+    setChannelSaving(true)
+    setChannelError('')
+    try {
+      await observability.updateAlertChannels(alertId, updated)
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, notification_channels: updated } : a))
+      setChannelValue('')
+    } catch (e) {
+      setChannelError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setChannelSaving(false)
+    }
+  }
+
+  async function handleRemoveChannel(alertId: string, idx: number) {
+    const alert = alerts.find(a => a.id === alertId)
+    if (!alert) return
+    const updated = (alert.notification_channels ?? []).filter((_, i) => i !== idx)
+    try {
+      await observability.updateAlertChannels(alertId, updated)
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, notification_channels: updated } : a))
+    } catch (e) {
+      setChannelError(e instanceof Error ? e.message : 'Remove failed')
+    }
   }
 
   async function handleEvaluate() {
@@ -166,8 +205,9 @@ export default function ObservabilityAlertsPage() {
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Create Alert</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Alert Name</label>
+              <label htmlFor="alert-name" className="block text-xs font-medium text-gray-600 mb-1">Alert Name</label>
               <input
+                id="alert-name"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="e.g. High Error Rate"
@@ -176,8 +216,9 @@ export default function ObservabilityAlertsPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                <label htmlFor="alert-condition" className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
                 <select
+                  id="alert-condition"
                   value={condType}
                   onChange={e => setCondType(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -189,10 +230,11 @@ export default function ObservabilityAlertsPage() {
                 <p className="text-xs text-gray-400 mt-1">{COND_HINTS[condType]}</p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label htmlFor="alert-threshold" className="block text-xs font-medium text-gray-600 mb-1">
                   Threshold {COND_UNITS[condType] ? `(${COND_UNITS[condType]})` : ''}
                 </label>
                 <input
+                  id="alert-threshold"
                   type="number"
                   min={0}
                   value={threshold}
@@ -202,8 +244,9 @@ export default function ObservabilityAlertsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Severity</label>
+                <label htmlFor="alert-severity" className="block text-xs font-medium text-gray-600 mb-1">Severity</label>
                 <select
+                  id="alert-severity"
                   value={severity}
                   onChange={e => setSeverity(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -261,24 +304,80 @@ export default function ObservabilityAlertsPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {alerts.map(a => (
-                <tr key={a.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {COND_LABELS[a.condition_type] ?? a.condition_type} {a.condition_threshold}{COND_UNITS[a.condition_type] ?? ''}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEV_COLOR[a.severity] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {a.severity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{a.triggered_count}×</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
-                    {a.last_triggered_at ? new Date(a.last_triggered_at).toLocaleString() : 'Never'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleDelete(a.id)} className="text-red-400 hover:text-red-600 text-xs">Delete</button>
-                  </td>
-                </tr>
+                <>
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {COND_LABELS[a.condition_type] ?? a.condition_type} {a.condition_threshold}{COND_UNITS[a.condition_type] ?? ''}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEV_COLOR[a.severity] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {a.severity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{a.triggered_count}×</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">
+                      {a.last_triggered_at ? new Date(a.last_triggered_at).toLocaleString() : 'Never'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => { setChannelAlertId(channelAlertId === a.id ? null : a.id); setChannelValue(''); setChannelError('') }}
+                          className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+                          title="Manage notification channels"
+                        >
+                          🔔 Notify {(a.notification_channels?.length ?? 0) > 0 && `(${a.notification_channels!.length})`}
+                        </button>
+                        <button onClick={() => handleDelete(a.id)} className="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                  {channelAlertId === a.id && (
+                    <tr key={`${a.id}-channels`}>
+                      <td colSpan={6} className="px-4 py-4 bg-cyan-50 border-l-2 border-cyan-300">
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Notification Channels</p>
+                          {(a.notification_channels ?? []).length === 0 && (
+                            <p className="text-xs text-gray-400">No channels yet — add one below</p>
+                          )}
+                          {(a.notification_channels ?? []).map((ch, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs">
+                              <span className={`px-1.5 py-0.5 rounded font-medium ${ch.type === 'email' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{ch.type}</span>
+                              <span className="text-gray-700 font-mono">{ch.type === 'email' ? ch.address : ch.url}</span>
+                              <button onClick={() => handleRemoveChannel(a.id, idx)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-2 pt-1">
+                            <select
+                              value={channelType}
+                              onChange={e => setChannelType(e.target.value as 'email' | 'webhook')}
+                              aria-label="Channel type"
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                            >
+                              <option value="email">Email</option>
+                              <option value="webhook">Webhook</option>
+                            </select>
+                            <input
+                              value={channelValue}
+                              onChange={e => setChannelValue(e.target.value)}
+                              placeholder={channelType === 'email' ? 'ops@yourcompany.com' : 'https://hooks.slack.com/...'}
+                              aria-label={channelType === 'email' ? 'Email address' : 'Webhook URL'}
+                              className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                            />
+                            <button
+                              onClick={() => handleAddChannel(a.id)}
+                              disabled={channelSaving}
+                              className="text-xs bg-cyan-500 hover:bg-cyan-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+                            >
+                              {channelSaving ? '…' : '+ Add'}
+                            </button>
+                          </div>
+                          {channelError && <p className="text-xs text-red-600">{channelError}</p>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>

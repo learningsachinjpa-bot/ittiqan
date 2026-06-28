@@ -162,7 +162,7 @@ const NEEDS_BASE_URL = new Set(['ollama', 'azure_openai', 'bedrock', 'vertex_ai'
 
 // ── Inline key field ──────────────────────────────────────────────────────────
 
-function UpdateKeyField({ hasKey, onSave }: { hasKey: boolean; onSave: (v: string) => void }) {
+function UpdateKeyField({ hasKey, onSave, inputId }: { hasKey: boolean; onSave: (v: string) => void; inputId?: string }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [show, setShow] = useState(false)
@@ -183,7 +183,7 @@ function UpdateKeyField({ hasKey, onSave }: { hasKey: boolean; onSave: (v: strin
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
-        <input type={show ? 'text' : 'password'} value={value} onChange={e => setValue(e.target.value)}
+        <input id={inputId} type={show ? 'text' : 'password'} value={value} onChange={e => setValue(e.target.value)}
           placeholder="Paste new key..." autoFocus style={{ paddingRight: '2.5rem' }}
           onKeyDown={e => { if (e.key === 'Escape') { setEditing(false); setValue('') } }} />
         <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -289,10 +289,10 @@ function ProviderCard({ provider, supportedModels, onUpdate, onDelete }: {
           {/* Name + model in one row */}
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Display name</label>
+              <label htmlFor="provider-display-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Display name</label>
               {editName ? (
                 <div className="flex items-center gap-1.5">
-                  <input ref={nameRef} value={nameDraft} onChange={e => setNameDraft(e.target.value)} className="text-sm py-1.5 px-2"
+                  <input id="provider-display-name" ref={nameRef} value={nameDraft} onChange={e => setNameDraft(e.target.value)} className="text-sm py-1.5 px-2"
                     onKeyDown={e => { if (e.key === 'Enter') { save('name', nameDraft); setEditName(false) } if (e.key === 'Escape') setEditName(false) }} />
                   <button onClick={() => { save('name', nameDraft); setEditName(false) }} className="text-green-500 p-1 rounded hover:bg-green-50"><Check className="w-3.5 h-3.5" /></button>
                   <button onClick={() => setEditName(false)} className="text-gray-400 p-1 rounded hover:bg-gray-50"><X className="w-3.5 h-3.5" /></button>
@@ -308,28 +308,28 @@ function ProviderCard({ provider, supportedModels, onUpdate, onDelete }: {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Model</label>
+              <label htmlFor="provider-model-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Model</label>
               {models.length > 0 ? (
-                <select defaultValue={provider.model_name} onChange={e => save('model_name', e.target.value)} className="text-sm py-1.5" style={{ width: '100%' }}>
+                <select id="provider-model-name" defaultValue={provider.model_name} onChange={e => save('model_name', e.target.value)} className="text-sm py-1.5" style={{ width: '100%' }}>
                   {models.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               ) : (
-                <input defaultValue={provider.model_name} onBlur={e => { if (e.target.value !== provider.model_name) save('model_name', e.target.value) }} className="text-sm py-1.5" />
+                <input id="provider-model-name" defaultValue={provider.model_name} onBlur={e => { if (e.target.value !== provider.model_name) save('model_name', e.target.value) }} className="text-sm py-1.5" />
               )}
             </div>
           </div>
 
           {/* API Key */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">API Key</label>
-            <UpdateKeyField hasKey={provider.has_api_key} onSave={v => save('api_key', v)} />
+            <label htmlFor="provider-api-key" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">API Key</label>
+            <UpdateKeyField inputId="provider-api-key" hasKey={provider.has_api_key} onSave={v => save('api_key', v)} />
           </div>
 
           {/* Base URL if needed */}
           {NEEDS_BASE_URL.has(provider.provider_type) && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Base URL</label>
-              <input defaultValue={provider.base_url || ''} placeholder={provider.provider_type === 'ollama' ? 'http://localhost:11434' : 'https://...'}
+              <label htmlFor="provider-base-url" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Base URL</label>
+              <input id="provider-base-url" defaultValue={provider.base_url || ''} placeholder={provider.provider_type === 'ollama' ? 'http://localhost:11434' : 'https://...'}
                 onBlur={e => { if (e.target.value !== (provider.base_url || '')) save('base_url', e.target.value) }} className="text-sm py-1.5" />
             </div>
           )}
@@ -425,7 +425,7 @@ function AddDrawer({ supportedModels, onAdd, onClose }: {
 
           {/* Provider grid */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Provider</label>
+            <p className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Provider</p>
             <div className="grid grid-cols-5 gap-2">
               {Object.entries(PROVIDER_NAMES).map(([key, name]) => (
                 <button key={key} onClick={() => setForm(f => ({ ...f, provider_type: key, model_name: '', name: f.name || '' }))}
@@ -438,26 +438,26 @@ function AddDrawer({ supportedModels, onAdd, onClose }: {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Display name</label>
-            <input value={form.name} onChange={e => setField('name', e.target.value)} placeholder={`e.g. ${PROVIDER_NAMES[form.provider_type]} Judge`} />
+            <label htmlFor="add-provider-display-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Display name</label>
+            <input id="add-provider-display-name" value={form.name} onChange={e => setField('name', e.target.value)} placeholder={`e.g. ${PROVIDER_NAMES[form.provider_type]} Judge`} />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Model</label>
+            <label htmlFor="add-provider-model-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Model</label>
             {models.length > 0 ? (
-              <select value={form.model_name} onChange={e => setField('model_name', e.target.value)}>
+              <select id="add-provider-model-name" value={form.model_name} onChange={e => setField('model_name', e.target.value)}>
                 <option value="">Select model...</option>
                 {models.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             ) : (
-              <input value={form.model_name} onChange={e => setField('model_name', e.target.value)} placeholder="Enter model name" />
+              <input id="add-provider-model-name" value={form.model_name} onChange={e => setField('model_name', e.target.value)} placeholder="Enter model name" />
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">API Key</label>
+            <label htmlFor="add-provider-api-key" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">API Key</label>
             <div className="relative">
-              <input type={showKey ? 'text' : 'password'} value={form.api_key} onChange={e => setField('api_key', e.target.value)}
+              <input id="add-provider-api-key" type={showKey ? 'text' : 'password'} value={form.api_key} onChange={e => setField('api_key', e.target.value)}
                 placeholder={form.provider_type === 'ollama' ? 'Leave empty for local Ollama' : 'sk-...'} style={{ paddingRight: '2.5rem' }} />
               <button type="button" onClick={() => setShowKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -467,8 +467,8 @@ function AddDrawer({ supportedModels, onAdd, onClose }: {
 
           {NEEDS_BASE_URL.has(form.provider_type) && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Base URL</label>
-              <input value={form.base_url} onChange={e => setField('base_url', e.target.value)}
+              <label htmlFor="add-provider-base-url" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Base URL</label>
+              <input id="add-provider-base-url" value={form.base_url} onChange={e => setField('base_url', e.target.value)}
                 placeholder={form.provider_type === 'ollama' ? 'http://localhost:11434' : 'https://your-endpoint'} />
             </div>
           )}

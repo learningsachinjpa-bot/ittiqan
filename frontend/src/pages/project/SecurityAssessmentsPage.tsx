@@ -329,10 +329,10 @@ export default function SecurityAssessmentsPage() {
               {step === 2 && fw && (
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Attack categories</label>
+                    <label htmlFor="security-all-categories" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Attack categories</label>
                     <div className="space-y-1">
                       <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <input type="checkbox" checked={selectedCategories.length === 0} onChange={() => setSelectedCategories([])} style={{ width: 'auto' }} />
+                        <input id="security-all-categories" type="checkbox" checked={selectedCategories.length === 0} onChange={() => setSelectedCategories([])} style={{ width: 'auto' }} />
                         <span className="text-sm font-medium text-gray-700">All categories ({fw.categories.length})</span>
                       </label>
                       {fw.categories.map(cat => (
@@ -346,8 +346,8 @@ export default function SecurityAssessmentsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Attacks per category</label>
-                    <select value={numAttacks} onChange={e => setNumAttacks(Number(e.target.value))}>
+                    <label htmlFor="security-num-attacks" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Attacks per category</label>
+                    <select id="security-num-attacks" value={numAttacks} onChange={e => setNumAttacks(Number(e.target.value))}>
                       <option value={3}>3 — Quick scan</option>
                       <option value={5}>5 — Standard</option>
                       <option value={10}>10 — Thorough</option>
@@ -355,8 +355,8 @@ export default function SecurityAssessmentsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Attacker LLM</label>
-                    <select value={attackerId} onChange={e => setAttackerId(e.target.value)}>
+                    <label htmlFor="security-attacker-llm" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Attacker LLM</label>
+                    <select id="security-attacker-llm" value={attackerId} onChange={e => setAttackerId(e.target.value)}>
                       <option value="">Organization default</option>
                       {providers.map((p) => (
                         <option key={p.id} value={p.id}>{p.name}{p.is_default_attacker ? ' ★' : ''}</option>
@@ -364,8 +364,8 @@ export default function SecurityAssessmentsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Judge LLM</label>
-                    <select value={judgeId} onChange={e => setJudgeId(e.target.value)}>
+                    <label htmlFor="security-judge-llm" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Judge LLM</label>
+                    <select id="security-judge-llm" value={judgeId} onChange={e => setJudgeId(e.target.value)}>
                       <option value="">Organization default</option>
                       {providers.map((p) => (
                         <option key={p.id} value={p.id}>{p.name}{p.is_default_judge ? ' ★' : ''}</option>

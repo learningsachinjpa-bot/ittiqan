@@ -138,7 +138,7 @@ export default function DashboardLayout() {
             <button className="text-gray-400 hover:text-gray-600">🔔</button>
             <div className="relative">
               <button onClick={() => setShowUser(!showUser)} className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900">
-                <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium text-xs overflow-hidden">{user?.picture ? <img src={user.picture} className="w-full h-full object-cover" /> : (user?.name?.[0] || 'U').toUpperCase()}</div>
+                <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium text-xs overflow-hidden">{user?.picture ? <img src={user.picture} alt={user.name || 'Profile'} className="w-full h-full object-cover" /> : (user?.name?.[0] || 'U').toUpperCase()}</div>
                 <span>{user?.name || 'User'}</span>
                 <ChevronDown className="w-4 h-4" />
               </button>

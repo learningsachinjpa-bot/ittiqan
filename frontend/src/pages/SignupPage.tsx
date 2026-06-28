@@ -93,24 +93,27 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label htmlFor="signup-name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input
+              id="signup-name"
               value={name} onChange={e => setName(e.target.value)}
               placeholder="John Doe"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              id="signup-email"
               type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@company.com"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
+              id="signup-password"
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="Min. 6 characters"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"

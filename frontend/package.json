@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint --config .oxlintrc.json --react-plugin --jsx-a11y-plugin src/",
     "preview": "vite preview"
   },
   "dependencies": {

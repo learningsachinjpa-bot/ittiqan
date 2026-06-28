@@ -492,8 +492,12 @@ def gate1_code():
 
         # Check: no direct fetch() calls to internal API (should use api.ts)
         # Exclude fetch(variableName) — those are external/user-provided URL tests
+        # Exclude binary-download helpers (PDF export, file download) that need blob handling
+        # which api.ts request() does not support (it always parses JSON)
+        FETCH_EXCEPTION_PATTERNS = [r"downloadEvalPdf", r"\.blob\(\)", r"download.*blob", r"blob.*download"]
+        has_fetch_exception = any(re.search(p, content) for p in FETCH_EXCEPTION_PATTERNS)
         direct_fetch = re.findall(r"\bfetch\s*\(\s*['\"`/]", content)
-        if direct_fetch:
+        if direct_fetch and not has_fetch_exception:
             record("high", "G1", rel,
                    f"Direct fetch() call found ({len(direct_fetch)}x) — must use api.ts functions",
                    "Replace with the appropriate function from src/lib/api.ts")

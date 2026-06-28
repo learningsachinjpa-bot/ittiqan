@@ -209,6 +209,33 @@ async def create_alert(
     db.refresh(alert)
     return {"id": alert.id, "name": alert.name, "condition_type": alert.condition_type}
 
+class AlertChannelsUpdate(BaseModel):
+    notification_channels: List[dict] = Field(default_factory=list, max_length=10)
+
+@router.patch("/alerts/{alert_id}/channels")
+async def update_alert_channels(
+    alert_id: str,
+    request: Request,
+    body: AlertChannelsUpdate,
+    user: User = Depends(require_role(*_WRITE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Update only the notification channels for an alert (email, webhook)."""
+    m = get_user_org_member(db, user.id)
+    a = db.query(Alert).filter(Alert.id == alert_id, Alert.org_id == m.org_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    a.notification_channels = body.notification_channels
+    db.add(AuditLog(
+        org_id=m.org_id, user_id=user.id,
+        action="alert.channels.update", resource_type="alert", resource_id=alert_id,
+        details=f"Updated notification channels for alert '{a.name}'",
+        ip_address=get_client_ip(request),
+    ))
+    db.commit()
+    db.refresh(a)
+    return {"id": a.id, "notification_channels": a.notification_channels}
+
 @router.delete("/alerts/{alert_id}")
 async def delete_alert(
     alert_id: str,

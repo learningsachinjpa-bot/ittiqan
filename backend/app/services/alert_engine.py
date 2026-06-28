@@ -8,7 +8,7 @@ can also be triggered on-demand via the alerts router.
 Condition types supported:
   error_rate      — % of traces that are ERROR or TIMEOUT > threshold (0-100)
   latency_spike   — avg latency_ms in window > threshold (ms)
-  score_drop      — not yet: placeholder for future eval score alerts
+  score_drop      — latest completed eval overall_score dropped below threshold (0.0–1.0)
 
 Notifications:
   - Always: creates an Incident record ("auto" source) so the Reliability page shows it
@@ -115,6 +115,11 @@ async def _fire_alert(alert: Alert, metric_value: float, db: Session) -> None:
         "fired_at": now.isoformat(),
     }
 
+    # Resolve agent name for email templates
+    from app.models.agent import Agent as AgentModel
+    agent_obj = db.query(AgentModel).filter(AgentModel.id == alert.agent_id).first() if alert.agent_id else None
+    agent_name = agent_obj.name if agent_obj else (alert.agent_id or "unknown")
+
     for channel in channels:
         channel_type = channel.get("type", "")
         if channel_type == "webhook":
@@ -122,11 +127,30 @@ async def _fire_alert(alert: Alert, metric_value: float, db: Session) -> None:
             if url:
                 await _fire_webhook(url, payload)
         elif channel_type == "email":
-            # Placeholder — log only until SMTP is configured
-            logger.info("Email alert (not yet sent): %s → %s", alert.name, channel.get("address", ""))
+            address = channel.get("address", "")
+            if address:
+                from app.services.email_service import send_email, _alert_html
+                from app.core.config import settings
+                dashboard_url = f"{settings.FRONTEND_URL}/project/{alert.agent_id}/reliability/incidents" if alert.agent_id else settings.FRONTEND_URL
+                html, plain = _alert_html(
+                    alert_name=alert.name,
+                    severity=alert.severity.value if alert.severity else "medium",
+                    condition_type=alert.condition_type,
+                    metric_value=metric_value,
+                    threshold=alert.condition_threshold,
+                    agent_name=agent_name,
+                    dashboard_url=dashboard_url,
+                )
+                subject = f"[{(alert.severity.value if alert.severity else 'medium').upper()}] Alert fired: {alert.name}"
+                await send_email(to=address, subject=subject, html=html, text=plain)
+            else:
+                logger.info("Email alert channel missing address — skipping: %s", alert.name)
 
 
 def _compute_metric(condition_type: str, traces: list) -> float | None:
+    if condition_type not in ("error_rate", "latency_spike"):
+        return None  # score_drop handled separately via _compute_score_drop
+
     if not traces:
         return None
 
@@ -138,8 +162,28 @@ def _compute_metric(condition_type: str, traces: list) -> float | None:
         latencies = [t.latency_ms for t in traces if t.latency_ms is not None]
         return mean(latencies) if latencies else None
 
-    # score_drop: not yet implemented, returns None to skip evaluation
     return None
+
+
+def _compute_score_drop(alert: object, db: Session) -> float | None:
+    """
+    Returns the most recent completed evaluation's overall_score for the alert's agent,
+    or None if no completed evaluation exists.
+    Fires when the score is BELOW the threshold.
+    """
+    from app.models.evaluation import Evaluation, EvaluationStatus
+    latest = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.org_id == alert.org_id,
+            Evaluation.agent_id == alert.agent_id,
+            Evaluation.status == EvaluationStatus.COMPLETED,
+            Evaluation.overall_score.isnot(None),
+        )
+        .order_by(Evaluation.completed_at.desc())
+        .first()
+    )
+    return latest.overall_score if latest else None
 
 
 async def evaluate_alerts(org_id: str | None = None, agent_id: str | None = None) -> list[dict]:
@@ -180,14 +224,21 @@ async def evaluate_alerts(org_id: str | None = None, agent_id: str | None = None
                 tq = tq.filter(Trace.agent_id == alert.agent_id)
             traces = tq.all()
 
-            if len(traces) < MIN_TRACES:
-                continue
+            # score_drop is evaluated against evaluations, not traces
+            if alert.condition_type == "score_drop":
+                metric = _compute_score_drop(alert, db)
+                if metric is None:
+                    continue
+                # score_drop fires when score is BELOW threshold (unlike error_rate/latency which fire above)
+                breached = metric < alert.condition_threshold
+            else:
+                if len(traces) < MIN_TRACES:
+                    continue
+                metric = _compute_metric(alert.condition_type, traces)
+                if metric is None:
+                    continue
+                breached = metric > alert.condition_threshold
 
-            metric = _compute_metric(alert.condition_type, traces)
-            if metric is None:
-                continue
-
-            breached = metric > alert.condition_threshold
             if breached:
                 await _fire_alert(alert, metric, db)
                 fired.append({
@@ -195,7 +246,7 @@ async def evaluate_alerts(org_id: str | None = None, agent_id: str | None = None
                     "alert_name": alert.name,
                     "condition_type": alert.condition_type,
                     "threshold": alert.condition_threshold,
-                    "metric_value": round(metric, 2),
+                    "metric_value": round(metric, 4),
                 })
 
         return fired

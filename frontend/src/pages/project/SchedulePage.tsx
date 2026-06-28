@@ -115,12 +115,12 @@ export default function SchedulePage() {
             {saveError && <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{saveError}</div>}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">NAME <span className="text-red-500">*</span></label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Nightly regression" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
+                <label htmlFor="sched-name" className="block text-sm font-medium text-gray-700 mb-1">NAME <span className="text-red-500">*</span></label>
+                <input id="sched-name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Nightly regression" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">FREQUENCY (CRON) <span className="text-red-500">*</span></label>
-                <select value={cron} onChange={e => setCron(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
+                <label htmlFor="sched-cron" className="block text-sm font-medium text-gray-700 mb-1">FREQUENCY (CRON) <span className="text-red-500">*</span></label>
+                <select id="sched-cron" value={cron} onChange={e => setCron(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
                   <option value="">Select a preset</option>
                   <option value="0 0 * * *">Daily at midnight (0 0 * * *)</option>
                   <option value="0 */6 * * *">Every 6 hours (0 */6 * * *)</option>

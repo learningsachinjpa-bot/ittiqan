@@ -290,31 +290,31 @@ export default function ConnectAgentPage() {
             <p className="text-gray-500 text-sm mb-6">Provide basic information about your agent.</p>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name <span className="text-red-500">*</span></label>
-                <input value={agentName} onChange={e => setAgentName(e.target.value)} placeholder="Enter agent name" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
+                <label htmlFor="connect-agent-name" className="block text-sm font-medium text-gray-700 mb-1">Agent Name <span className="text-red-500">*</span></label>
+                <input id="connect-agent-name" value={agentName} onChange={e => setAgentName(e.target.value)} placeholder="Enter agent name" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                <label htmlFor="connect-agent-tags" className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
                 <div className="flex gap-2">
-                  <input value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTag()} placeholder="Enter tag and press Enter" className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
+                  <input id="connect-agent-tags" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTag()} placeholder="Enter tag and press Enter" className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
                   <button onClick={addTag} className="bg-cyan-500 text-white px-3 py-2 rounded-lg text-sm">Add</button>
                 </div>
                 {tags.length > 0 && <div className="flex gap-1 mt-2 flex-wrap">{tags.map(t => <span key={t} className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">{t}</span>)}</div>}
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Enter agent description" rows={4} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
+              <label htmlFor="connect-agent-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea id="connect-agent-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Enter agent description" rows={4} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
             </div>
             <div className="space-y-2 mt-1">
-              <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
+              <label aria-label="Enable Multi-Turn Metrics" className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
                 <input type="checkbox" checked={multiTurn} onChange={e => setMultiTurn(e.target.checked)} className="mt-0.5 rounded accent-cyan-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Enable Multi-Turn Metrics</p>
                   <p className="text-xs text-gray-400 mt-0.5">Tracks quality across multi-step conversations</p>
                 </div>
               </label>
-              <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
+              <label aria-label="Enable Trace Metrics" className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
                 <input type="checkbox" checked={traceMetrics} onChange={e => setTraceMetrics(e.target.checked)} className="mt-0.5 rounded accent-cyan-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Enable Trace Metrics</p>
@@ -330,7 +330,7 @@ export default function ConnectAgentPage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">Evaluation Approach</h2>
             <p className="text-gray-500 text-sm mb-6">Choose how to group metrics — we'll pre-select the right ones for you.</p>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Metric Mode <span className="text-red-500">*</span></label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Metric Mode <span className="text-red-500">*</span></p>
             <div className="grid grid-cols-2 gap-4 mb-6">
               {[
                 { key: 'capability', label: 'By Agent Capabilities', desc: 'Pick what your agent can do — we select the matching metrics' },
@@ -348,7 +348,7 @@ export default function ConnectAgentPage() {
 
             {metricMode === 'capability' ? (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Capabilities <span className="text-red-500">*</span></label>
+                <p className="block text-sm font-medium text-gray-700 mb-3">Capabilities <span className="text-red-500">*</span></p>
                 <div className="grid grid-cols-3 gap-3">
                   {Object.keys(CAPABILITY_METRIC_IDS).map(cap => (
                     <label key={cap} className={`flex items-center gap-2 text-sm cursor-pointer p-3 border-2 rounded-lg transition-colors ${capabilities.includes(cap) ? 'border-cyan-400 bg-cyan-50 text-cyan-800' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}>
@@ -365,7 +365,7 @@ export default function ConnectAgentPage() {
               </>
             ) : (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Categories <span className="text-red-500">*</span></label>
+                <p className="block text-sm font-medium text-gray-700 mb-3">Categories <span className="text-red-500">*</span></p>
                 <div className="grid grid-cols-3 gap-3">
                   {Object.keys(CATEGORY_METRIC_IDS).map(cat => (
                     <label key={cat} className={`flex items-center gap-2 text-sm cursor-pointer p-3 border-2 rounded-lg transition-colors ${selectedCategories.includes(cat) ? 'border-cyan-400 bg-cyan-50 text-cyan-800' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}>
@@ -500,8 +500,8 @@ export default function ConnectAgentPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">API Configuration</h2>
             <p className="text-gray-500 text-sm mb-6">Configure how the system calls your chatbot or agent API.</p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quick Setup Preset</label>
-              <select onChange={e => {
+              <label htmlFor="connect-quick-preset" className="block text-sm font-medium text-gray-700 mb-1">Quick Setup Preset</label>
+              <select id="connect-quick-preset" onChange={e => {
                 if (e.target.value === 'openai') setPayload('{\n  "model": "gpt-4o",\n  "messages": [{"role": "user", "content": "{{input}}"}]\n}')
                 else if (e.target.value === 'anthropic') setPayload('{\n  "model": "claude-3-5-sonnet-20241022",\n  "max_tokens": 1024,\n  "messages": [{"role": "user", "content": "{{input}}"}]\n}')
                 else if (e.target.value === 'standard') setPayload('{\n  "input": "{{input}}"\n}')
@@ -514,34 +514,34 @@ export default function ConnectAgentPage() {
             </div>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">API Endpoint URL <span className="text-red-500">*</span></label>
-                <input value={apiUrl} onChange={e => setApiUrl(e.target.value)} placeholder="https://api.example.com/chat" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
+                <label htmlFor="connect-api-url" className="block text-sm font-medium text-gray-700 mb-1">API Endpoint URL <span className="text-red-500">*</span></label>
+                <input id="connect-api-url" value={apiUrl} onChange={e => setApiUrl(e.target.value)} placeholder="https://api.example.com/chat" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">HTTP Method</label>
-                <select value={httpMethod} onChange={e => setHttpMethod(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
+                <label htmlFor="connect-http-method" className="block text-sm font-medium text-gray-700 mb-1">HTTP Method</label>
+                <select id="connect-http-method" value={httpMethod} onChange={e => setHttpMethod(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
                   <option>POST</option>
                   <option>GET</option>
                 </select>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Request Payload Template <span className="text-red-500">*</span></label>
-              <textarea value={payload} onChange={e => setPayload(e.target.value)} rows={5} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-cyan-400 bg-gray-50" />
+              <label htmlFor="connect-payload-template" className="block text-sm font-medium text-gray-700 mb-1">Request Payload Template <span className="text-red-500">*</span></label>
+              <textarea id="connect-payload-template" value={payload} onChange={e => setPayload(e.target.value)} rows={5} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-cyan-400 bg-gray-50" />
               <p className="text-xs text-cyan-600 mt-1">Use <code className="bg-cyan-50 px-1 rounded">{'{{input}}'}</code> for the test case input.</p>
             </div>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Response Type</label>
-                <select value={responseType} onChange={e => setResponseType(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
+                <label htmlFor="connect-response-type" className="block text-sm font-medium text-gray-700 mb-1">Response Type</label>
+                <select id="connect-response-type" value={responseType} onChange={e => setResponseType(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none">
                   <option>JSON</option>
                   <option>SSE</option>
                   <option>JSONL</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Response JSON Path</label>
-                <input value={responsePath} onChange={e => setResponsePath(e.target.value)} placeholder="e.g. choices.0.message.content" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
+                <label htmlFor="connect-response-path" className="block text-sm font-medium text-gray-700 mb-1">Response JSON Path</label>
+                <input id="connect-response-path" value={responsePath} onChange={e => setResponsePath(e.target.value)} placeholder="e.g. choices.0.message.content" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400" />
               </div>
             </div>
             <button onClick={handleTestConnection} disabled={!apiUrl || testTesting} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
@@ -557,13 +557,13 @@ export default function ConnectAgentPage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">LLM Judge Selection</h2>
             <p className="text-gray-500 text-sm mb-6">Select the default LLM judge for your agent evaluations.</p>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Default Judge <span className="text-red-500">*</span></label>
+            <label htmlFor="connect-judge-provider" className="block text-sm font-medium text-gray-700 mb-1">Default Judge <span className="text-red-500">*</span></label>
             {availableProviders.length === 0 ? (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 mb-4">
                 No LLM providers connected yet. <a href="/dashboard/models" className="font-semibold underline">Add one in Models</a> first, then come back here.
               </div>
             ) : (
-              <select value={llmJudgeProviderId} onChange={e => setLlmJudgeProviderId(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400 mb-4">
+              <select id="connect-judge-provider" value={llmJudgeProviderId} onChange={e => setLlmJudgeProviderId(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400 mb-4">
                 <option value="">— Use organization default —</option>
                 {availableProviders.map((p) => (
                   <option key={p.id} value={p.id}>{p.name} ({p.model_name}){p.is_default_judge ? ' ★ Default' : ''}</option>

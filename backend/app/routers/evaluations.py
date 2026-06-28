@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import StreamingResponse
+import io
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -267,6 +269,45 @@ async def get_results(
         }
         for r in results
     ]
+
+@router.get("/{eval_id}/report/pdf")
+async def download_evaluation_pdf(
+    eval_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download a PDF report for a completed evaluation."""
+    org_id = get_user_org_id(db, user.id)
+    e = db.query(Evaluation).filter(Evaluation.id == eval_id, Evaluation.org_id == org_id).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    if e.status.value not in ("completed", "failed"):
+        raise HTTPException(status_code=409, detail="Report only available for completed evaluations")
+
+    agent = db.query(Agent).filter(Agent.id == e.agent_id).first()
+    agent_name = agent.name if agent else e.agent_id
+
+    from app.models.organization import Organization
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    org_name = org.name if org else org_id
+
+    results = db.query(EvaluationResult).filter(EvaluationResult.evaluation_id == eval_id).all()
+
+    from app.services.report_generator import generate_evaluation_report
+    pdf_bytes = generate_evaluation_report(
+        evaluation=e,
+        agent_name=agent_name,
+        org_name=org_name,
+        results=results,
+    )
+
+    filename = f"ittiqan-eval-{e.name.replace(' ', '-')[:40]}-{eval_id[:8]}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 @router.websocket("/{eval_id}/ws")
 async def evaluation_websocket(eval_id: str, websocket: WebSocket, token: str = ""):

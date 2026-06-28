@@ -67,17 +67,17 @@ function UploadDrawer({ onDone, onClose }: { onDone: (d: Dataset) => void; onClo
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Name <span className="text-red-400">*</span></label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production eval set Q2 2025" />
+            <label htmlFor="ds-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Name <span className="text-red-400">*</span></label>
+            <input id="ds-name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production eval set Q2 2025" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional — what's in this dataset?" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
+            <label htmlFor="ds-desc" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Description</label>
+            <textarea id="ds-desc" value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Optional — what's in this dataset?" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">File <span className="text-red-400">*</span></label>
+            <p className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">File <span className="text-red-400">*</span></p>
             <input ref={inputRef} type="file" accept=".json,.jsonl,.csv" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
             <button onClick={() => inputRef.current?.click()}
               className={`w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-6 text-sm transition-colors ${file ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500'}`}>
@@ -150,16 +150,16 @@ function AddCaseDrawer({ datasetId, onDone, onClose }: { datasetId: string; onDo
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Input <span className="text-red-400">*</span></label>
-            <textarea value={input} onChange={e => setInput(e.target.value)} rows={4} placeholder="The user message or question" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
+            <label htmlFor="tc-input" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Input <span className="text-red-400">*</span></label>
+            <textarea id="tc-input" value={input} onChange={e => setInput(e.target.value)} rows={4} placeholder="The user message or question" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Expected output</label>
-            <textarea value={expected} onChange={e => setExpected(e.target.value)} rows={3} placeholder="Reference answer (used for answer relevancy scoring)" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
+            <label htmlFor="tc-expected" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Expected output</label>
+            <textarea id="tc-expected" value={expected} onChange={e => setExpected(e.target.value)} rows={3} placeholder="Reference answer (used for answer relevancy scoring)" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Retrieval context <span className="text-gray-300">(RAG only)</span></label>
-            <textarea value={retrieval} onChange={e => setRetrieval(e.target.value)} rows={3} placeholder={'JSON array or one chunk per line:\n["chunk 1", "chunk 2"]'} className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none font-mono" />
+            <label htmlFor="tc-retrieval" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Retrieval context <span className="text-gray-300">(RAG only)</span></label>
+            <textarea id="tc-retrieval" value={retrieval} onChange={e => setRetrieval(e.target.value)} rows={3} placeholder={'JSON array or one chunk per line:\n["chunk 1", "chunk 2"]'} className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none font-mono" />
           </div>
           {error && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">

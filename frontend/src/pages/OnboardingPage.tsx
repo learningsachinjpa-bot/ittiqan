@@ -51,15 +51,15 @@ export default function OnboardingPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">Your organization</h2>
             <p className="text-gray-500 text-sm mb-6">This is your isolated workspace — projects, evaluations and data live inside it.</p>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Organization name <span className="text-red-500">*</span></label>
-            <input value={orgName} onChange={e => handleOrgName(e.target.value)} placeholder="e.g. Acme AI" className="w-full border border-cyan-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-4" />
+            <label htmlFor="org-name" className="block text-sm font-medium text-gray-700 mb-1">Organization name <span className="text-red-500">*</span></label>
+            <input id="org-name" value={orgName} onChange={e => handleOrgName(e.target.value)} placeholder="e.g. Acme AI" className="w-full border border-cyan-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-4" />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Workspace URL slug</label>
-            <input value={slug} onChange={e => setSlug(e.target.value)} placeholder="acme-ai" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-1" />
+            <label htmlFor="org-slug" className="block text-sm font-medium text-gray-700 mb-1">Workspace URL slug</label>
+            <input id="org-slug" value={slug} onChange={e => setSlug(e.target.value)} placeholder="acme-ai" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-1" />
             <p className="text-xs text-gray-400 mb-6">Auto-generated from the name. Lowercase letters, numbers and hyphens.</p>
 
             {/* Region — determines which data residency & AI policies apply */}
-            <label className="block text-sm font-medium text-gray-700 mb-3">Data Region</label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Data Region</p>
             {(() => {
               const REGIONS = [
                 {
@@ -109,7 +109,7 @@ export default function OnboardingPage() {
               )
             })()}
 
-            <label className="block text-sm font-medium text-gray-700 mb-3">Plan</label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Plan</p>
             <div className="grid grid-cols-3 gap-3 mb-6">
               {[
                 { key: 'free', name: 'Free', desc: 'Get started — core evaluations & dashboards.' },
@@ -137,8 +137,8 @@ export default function OnboardingPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">A few details</h2>
             <p className="text-gray-500 text-sm mb-6">Optional — helps us tailor your workspace. You can change these later.</p>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Team or department</label>
-            <select value={department} onChange={e => setDepartment(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-4">
+            <label htmlFor="onboard-dept" className="block text-sm font-medium text-gray-700 mb-1">Team or department</label>
+            <select id="onboard-dept" value={department} onChange={e => setDepartment(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none mb-4">
               <option value="">Select a team or department...</option>
               <option>Engineering</option>
               <option>QA & Testing</option>
@@ -148,8 +148,8 @@ export default function OnboardingPage() {
               <option>Data Science</option>
             </select>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">What will you use Ittiqan for?</label>
-            <textarea value={useCase} onChange={e => setUseCase(e.target.value)} rows={4} placeholder="e.g. Evaluate our customer-support chatbot for accuracy and safety." className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none resize-none" />
+            <label htmlFor="onboarding-use-case" className="block text-sm font-medium text-gray-700 mb-1">What will you use Ittiqan for?</label>
+            <textarea id="onboarding-use-case" value={useCase} onChange={e => setUseCase(e.target.value)} rows={4} placeholder="e.g. Evaluate our customer-support chatbot for accuracy and safety." className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none resize-none" />
 
             {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
             <div className="flex justify-between mt-6">

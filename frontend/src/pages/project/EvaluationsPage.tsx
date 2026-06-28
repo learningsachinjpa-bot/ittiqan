@@ -2,7 +2,23 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { evaluations as evalsApi, datasets as datasetsApi, llmProviders, getWsUrl } from '../../lib/api'
 import type { Evaluation, EvaluationResult, Dataset, LLMProvider, MetricInfo } from '../../types'
-import { Play, ChevronDown, ChevronRight, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { Play, ChevronDown, ChevronRight, CheckCircle, XCircle, Clock, AlertCircle, Download } from 'lucide-react'
+import { getApiBase } from '../../lib/api'
+
+async function downloadEvalPdf(evalId: string, evalName: string) {
+  const token = localStorage.getItem('ittiqan_access_token')
+  const res = await fetch(`${getApiBase()}/evaluations/${evalId}/report/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `ittiqan-eval-${evalName.replace(/\s+/g, '-').slice(0, 40)}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -301,6 +317,15 @@ export default function EvaluationsPage() {
                   {ev.overall_score == null && ev.status !== 'failed' && (
                     <div className="text-xs text-gray-400">{ev.completed_cases || 0}/{ev.total_cases} done</div>
                   )}
+                  {ev.status === 'completed' && (
+                    <button
+                      onClick={e => { e.stopPropagation(); downloadEvalPdf(ev.id, ev.name) }}
+                      title="Download PDF report"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-600 hover:bg-cyan-50"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => expandedId === ev.id ? setExpandedId(null) : loadResults(ev.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50">
                     {expandedId === ev.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -370,17 +395,17 @@ export default function EvaluationsPage() {
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Run name (optional)</label>
-                <input value={runName} onChange={e => setRunName(e.target.value)} placeholder={`Run ${new Date().toLocaleDateString()}`} />
+                <label htmlFor="eval-run-name" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Run name (optional)</label>
+                <input id="eval-run-name" value={runName} onChange={e => setRunName(e.target.value)} placeholder={`Run ${new Date().toLocaleDateString()}`} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Dataset <span className="text-red-500">*</span></label>
+                <label htmlFor="eval-dataset" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Dataset <span className="text-red-500">*</span></label>
                 {datasets.length === 0 ? (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
                     No datasets yet. <a href="#" className="font-semibold underline">Upload one in Datasets</a> first.
                   </div>
                 ) : (
-                  <select value={datasetId} onChange={e => setDatasetId(e.target.value)}>
+                  <select id="eval-dataset" value={datasetId} onChange={e => setDatasetId(e.target.value)}>
                     <option value="">Select dataset...</option>
                     {datasets.map(d => (
                       <option key={d.id} value={d.id}>{d.name} (v{d.version}, {d.row_count} cases)</option>
@@ -389,8 +414,8 @@ export default function EvaluationsPage() {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">LLM Judge</label>
-                <select value={judgeId} onChange={e => setJudgeId(e.target.value)}>
+                <label htmlFor="eval-judge" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">LLM Judge</label>
+                <select id="eval-judge" value={judgeId} onChange={e => setJudgeId(e.target.value)}>
                   <option value="">Organization default</option>
                   {providers.map(p => (
                     <option key={p.id} value={p.id}>{p.name} — {p.model_name}{p.is_default_judge ? ' ★' : ''}</option>
@@ -399,7 +424,7 @@ export default function EvaluationsPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Metrics ({selectedMetrics.length}/{availableMetrics.length})</label>
+                  <p className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Metrics ({selectedMetrics.length}/{availableMetrics.length})</p>
                   <div className="flex gap-2">
                     <button onClick={() => setSelectedMetrics(availableMetrics)} className="text-xs text-cyan-500 font-semibold">All</button>
                     <button onClick={() => setSelectedMetrics([])} className="text-xs text-gray-400">None</button>

@@ -99,8 +99,9 @@ export default function ReliabilityIncidentsPage() {
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Report Incident</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+              <label htmlFor="incident-title" className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
               <input
+                id="incident-title"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Agent responses degraded — high latency"
@@ -108,8 +109,9 @@ export default function ReliabilityIncidentsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <label htmlFor="incident-description" className="block text-xs font-medium text-gray-600 mb-1">Description</label>
               <textarea
+                id="incident-description"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
@@ -118,8 +120,9 @@ export default function ReliabilityIncidentsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Severity</label>
+              <label htmlFor="incident-severity" className="block text-xs font-medium text-gray-600 mb-1">Severity</label>
               <select
+                id="incident-severity"
                 value={severity}
                 onChange={e => setSeverity(e.target.value)}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
