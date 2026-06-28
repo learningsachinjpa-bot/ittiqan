@@ -57,6 +57,8 @@ def assessment_to_dict(a: SecurityAssessment) -> dict:
         "failed_attacks": max(0, failed_attacks),
         "overall_score": a.overall_score,
         "overall_risk_score": a.overall_score,
+        "risk_score": a.overall_score,
+        "vulnerable_count": max(0, failed_attacks),
         "critical_count": a.critical_count,
         "high_count": a.high_count, "medium_count": a.medium_count,
         "low_count": a.low_count, "passed_count": a.passed_count,

@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 import app.models  # ensure all models are registered
 
-from app.routers import auth, organizations, agents, datasets, evaluations, security, llm_providers, observability, schedules, reliability
+from app.routers import auth, organizations, agents, datasets, evaluations, security, llm_providers, observability, schedules, reliability, health
 
 logging.basicConfig(level=logging.INFO)
 
@@ -78,11 +78,14 @@ def _run_column_migrations() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.core.redis_client import init_redis, close_redis
+    from app.services.health_monitor import start_scheduler, stop_scheduler
     Base.metadata.create_all(bind=engine)
     _run_column_migrations()
     _recover_orphaned_jobs()
     await init_redis()
+    start_scheduler()
     yield
+    stop_scheduler()
     await close_redis()
 
 app = FastAPI(
@@ -137,6 +140,7 @@ app.include_router(llm_providers.router, prefix="/api/v1")
 app.include_router(observability.router, prefix="/api/v1")
 app.include_router(schedules.router, prefix="/api/v1")
 app.include_router(reliability.router, prefix="/api/v1")
+app.include_router(health.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

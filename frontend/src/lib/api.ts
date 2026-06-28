@@ -344,3 +344,28 @@ export const schedules = {
   pauseAll: () =>
     request<{ success: boolean }>('/schedules/pause-all', { method: 'POST' }),
 }
+
+// ── Health Monitor ────────────────────────────────────────────────────────────
+
+export interface AgentHealthStatus {
+  agent_id: string; agent_name: string; status: string
+  uptime_pct: number | null; total_checks: number
+  avg_latency_ms: number | null; last_check: string | null; last_status: string
+}
+
+export interface HealthStatusResponse {
+  agents: AgentHealthStatus[]; check_interval_minutes: number; period_hours: number
+}
+
+export interface ManualCheckResult {
+  agent_id: string; agent_name?: string; status: string
+  latency_ms: number | null; error?: string | null; skipped?: boolean; reason?: string
+}
+
+export const healthMonitor = {
+  status: (hours = 24) => request<HealthStatusResponse>(`/health/status?hours=${hours}`),
+  check: (agentId: string) => request<ManualCheckResult>(`/health/check/${agentId}`, { method: 'POST' }),
+  config: () => request<{ check_interval_minutes: number }>('/health/config'),
+  setInterval: (minutes: number) =>
+    request<{ check_interval_minutes: number }>('/health/config', { method: 'PUT', body: JSON.stringify({ minutes }) }),
+}
