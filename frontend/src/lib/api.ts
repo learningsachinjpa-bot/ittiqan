@@ -131,6 +131,17 @@ export const orgs = {
     return request<AuditLogPage>(`/organizations/me/audit-logs?${q}`)
   },
   usageStats: () => request<UsageStats>('/organizations/me/usage-stats'),
+  getNotificationPrefs: () =>
+    request<NotificationPrefs>('/organizations/me/notification-preferences'),
+  updateNotificationPrefs: (prefs: Partial<NotificationPrefs>) =>
+    request<NotificationPrefs>('/organizations/me/notification-preferences', {
+      method: 'PATCH', body: JSON.stringify(prefs),
+    }),
+}
+
+export interface NotificationPrefs {
+  notify_on_new_approval: boolean
+  notify_on_approval_decision: boolean
 }
 
 export interface AuditLogEntry {

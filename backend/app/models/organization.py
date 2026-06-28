@@ -59,6 +59,9 @@ class OrgMember(Base):
     role = Column(SAEnum(OrgMemberRole), default=OrgMemberRole.DEVELOPER)
     invited_by = Column(String, ForeignKey("users.id"), nullable=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
+    # Notification preferences — per-member opt-in/out
+    notify_on_new_approval = Column(Boolean, default=True)
+    notify_on_approval_decision = Column(Boolean, default=True)
 
     organization = relationship("Organization", back_populates="members", foreign_keys=[org_id])
     user = relationship("User", foreign_keys=[user_id], back_populates="org_memberships")

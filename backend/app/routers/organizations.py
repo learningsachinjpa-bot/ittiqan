@@ -330,3 +330,45 @@ async def get_usage_stats(
         "daily_evals": daily_evals,
         "agents": agent_rows,
     }
+
+
+# ── Notification preferences ───────────────────────────────────────────────────
+
+class NotificationPrefsUpdate(BaseModel):
+    notify_on_new_approval: Optional[bool] = None
+    notify_on_approval_decision: Optional[bool] = None
+
+@router.get("/me/notification-preferences")
+async def get_notification_preferences(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the current user's notification preferences for their org membership."""
+    m = db.query(OrgMember).filter(OrgMember.user_id == user.id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="No organization found")
+    return {
+        "notify_on_new_approval": getattr(m, "notify_on_new_approval", True),
+        "notify_on_approval_decision": getattr(m, "notify_on_approval_decision", True),
+    }
+
+@router.patch("/me/notification-preferences")
+async def update_notification_preferences(
+    req: NotificationPrefsUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the current user's notification preferences."""
+    m = db.query(OrgMember).filter(OrgMember.user_id == user.id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="No organization found")
+    if req.notify_on_new_approval is not None:
+        m.notify_on_new_approval = req.notify_on_new_approval
+    if req.notify_on_approval_decision is not None:
+        m.notify_on_approval_decision = req.notify_on_approval_decision
+    db.commit()
+    db.refresh(m)
+    return {
+        "notify_on_new_approval": m.notify_on_new_approval,
+        "notify_on_approval_decision": m.notify_on_approval_decision,
+    }

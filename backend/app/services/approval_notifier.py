@@ -31,6 +31,7 @@ async def notify_new_request(req: ApprovalRequest, org: Organization, db: Sessio
         admin_user_ids = [
             m.user_id for m in members
             if m.role.value in ("owner", "admin")
+            and getattr(m, "notify_on_new_approval", True)  # respect per-member preference
         ]
         if not admin_user_ids:
             return

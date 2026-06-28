@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { orgs, type OrgMember } from '../../lib/api'
+import { orgs, type OrgMember, type NotificationPrefs } from '../../lib/api'
 
 const ROLES = ['viewer', 'developer', 'qa', 'admin']
 
@@ -12,12 +12,40 @@ export default function TeamPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState('')
 
+  // Notification preferences
+  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null)
+  const [prefsLoading, setPrefsLoading] = useState(true)
+  const [prefsSaving, setPrefsSaving] = useState(false)
+  const [prefsSaved, setPrefsSaved] = useState(false)
+
   useEffect(() => {
     orgs.members()
       .then(setMembers)
       .catch(e => setError((e as Error).message))
       .finally(() => setLoading(false))
+
+    orgs.getNotificationPrefs()
+      .then(setPrefs)
+      .catch(() => {}) // non-critical
+      .finally(() => setPrefsLoading(false))
   }, [])
+
+  async function handleTogglePref(key: keyof NotificationPrefs) {
+    if (!prefs) return
+    const updated = { ...prefs, [key]: !prefs[key] }
+    setPrefs(updated)
+    setPrefsSaving(true)
+    setPrefsSaved(false)
+    try {
+      await orgs.updateNotificationPrefs({ [key]: updated[key] })
+      setPrefsSaved(true)
+      setTimeout(() => setPrefsSaved(false), 2000)
+    } catch {
+      setPrefs(prefs) // rollback on error
+    } finally {
+      setPrefsSaving(false)
+    }
+  }
 
   async function handleInvite() {
     if (!inviteEmail.trim()) return
@@ -68,6 +96,51 @@ export default function TeamPage() {
           </button>
         </div>
         <p className="text-xs text-gray-400 mt-2">The user must already have an Ittiqan account.</p>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-gray-900">My Notification Preferences</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Control which email notifications you receive for your account.</p>
+          </div>
+          {prefsSaved && <span className="text-xs text-green-600 font-medium">Saved ✓</span>}
+          {prefsSaving && <span className="text-xs text-gray-400">Saving…</span>}
+        </div>
+        {prefsLoading ? (
+          <div className="text-sm text-gray-400">Loading preferences…</div>
+        ) : prefs ? (
+          <div className="space-y-4">
+            {([
+              { key: 'notify_on_new_approval' as const, label: 'New approval requests', desc: 'Receive an email when a new approval request arrives in the queue (admins and owners only).' },
+              { key: 'notify_on_approval_decision' as const, label: 'Approval decisions', desc: 'Receive an email when a request you submitted is approved or rejected.' },
+            ]).map(({ key, label, desc }) => (
+              <label key={key} className="flex items-start gap-3 cursor-pointer group">
+                <div className="mt-0.5 relative flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={prefs[key]}
+                    onChange={() => handleTogglePref(key)}
+                    className="sr-only"
+                  />
+                  <div
+                    onClick={() => handleTogglePref(key)}
+                    className={`w-10 h-6 rounded-full transition-colors ${prefs[key] ? 'bg-cyan-500' : 'bg-gray-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${prefs[key] ? 'left-5' : 'left-1'}`} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">Could not load preferences.</p>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

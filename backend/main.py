@@ -62,6 +62,9 @@ def _run_column_migrations() -> None:
         "ALTER TABLE agents ADD COLUMN IF NOT EXISTS llm_judge_provider_id VARCHAR REFERENCES llm_providers(id) ON DELETE SET NULL",
         # Added: max_datasets on organizations table
         "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_datasets INTEGER DEFAULT 5",
+        # Added: per-member notification preferences
+        "ALTER TABLE org_members ADD COLUMN IF NOT EXISTS notify_on_new_approval BOOLEAN DEFAULT true",
+        "ALTER TABLE org_members ADD COLUMN IF NOT EXISTS notify_on_approval_decision BOOLEAN DEFAULT true",
     ]
     try:
         for stmt in migrations:
