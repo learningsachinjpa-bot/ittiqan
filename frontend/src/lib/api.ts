@@ -256,36 +256,67 @@ export const llmProviders = {
 
 // ── Observability ─────────────────────────────────────────────────────────────
 
-interface TraceBody {
-  agent_id: string; session_id?: string; input: string; output: string
-  latency_ms?: number; tokens_used?: number; cost_usd?: number
-  metadata?: Record<string, unknown>
+export interface Trace {
+  id: string; trace_id: string; agent_id?: string; status: string
+  latency_ms?: number; tokens_input: number; tokens_output: number
+  cost_usd: number; model_used?: string; timestamp: string; error_message?: string
 }
 
-interface AlertBody {
-  name: string; metric: string; operator: '<' | '>'
-  threshold: number; agent_id?: string
+export interface TraceDetail extends Trace {
+  input?: string; output?: string; spans: unknown[]
+}
+
+export interface ObsMetrics {
+  total_calls: number; error_rate: number; avg_latency_ms: number
+  p50_latency_ms: number; p95_latency_ms: number; p99_latency_ms: number
+  total_tokens: number; total_cost_usd: number; throughput_per_hour: number
+}
+
+export interface ObsAlert {
+  id: string; name: string; agent_id?: string; severity: string
+  condition_type: string; condition_threshold: number
+  is_active: boolean; triggered_count: number; last_triggered_at?: string
+}
+
+interface AlertCreateBody {
+  name: string; condition_type: string; condition_threshold: number
+  severity?: string; agent_id?: string; notification_channels?: unknown[]
 }
 
 export const observability = {
   traces: (agentId?: string, hours = 24) =>
-    request<{ id: string; input: string; output: string; latency_ms: number; created_at: string }[]>(
-      `/observability/traces?hours=${hours}${agentId ? `&agent_id=${agentId}` : ''}`
-    ),
+    request<Trace[]>(`/observability/traces?hours=${hours}${agentId ? `&agent_id=${agentId}` : ''}`),
   trace: (traceId: string) =>
-    request<{ id: string; input: string; output: string; spans: unknown[] }>(`/observability/traces/${traceId}`),
+    request<TraceDetail>(`/observability/traces/${traceId}`),
   metrics: (agentId?: string, hours = 24) =>
-    request<{ avg_latency_ms: number; total_traces: number; error_rate: number }>(
-      `/observability/metrics?hours=${hours}${agentId ? `&agent_id=${agentId}` : ''}`
-    ),
-  ingestTrace: (body: TraceBody) =>
-    request<{ id: string }>('/observability/traces', { method: 'POST', body: JSON.stringify(body) }),
-  alerts: () =>
-    request<{ id: string; name: string; metric: string; threshold: number; is_active: boolean }[]>('/observability/alerts'),
-  createAlert: (body: AlertBody) =>
+    request<ObsMetrics>(`/observability/metrics?hours=${hours}${agentId ? `&agent_id=${agentId}` : ''}`),
+  alerts: () => request<ObsAlert[]>('/observability/alerts'),
+  createAlert: (body: AlertCreateBody) =>
     request<{ id: string }>('/observability/alerts', { method: 'POST', body: JSON.stringify(body) }),
   deleteAlert: (id: string) =>
     request<{ success: boolean }>(`/observability/alerts/${id}`, { method: 'DELETE' }),
+}
+
+// ── Reliability ───────────────────────────────────────────────────────────────
+
+export interface UptimeEntry {
+  id: string; agent_id: string; status: string
+  latency_ms?: number; checked_at: string; error_message?: string
+}
+
+export interface Incident {
+  id: string; agent_id?: string; title: string; severity: string
+  status: string; created_at: string; resolved_at?: string; description?: string
+}
+
+export const reliability = {
+  uptime: (agentId?: string, hours = 24) =>
+    request<UptimeEntry[]>(`/reliability/uptime?hours=${hours}${agentId ? `&agent_id=${agentId}` : ''}`),
+  incidents: () => request<Incident[]>('/reliability/incidents'),
+  createIncident: (body: { title: string; severity: string; agent_id?: string; description?: string }) =>
+    request<Incident>('/reliability/incidents', { method: 'POST', body: JSON.stringify(body) }),
+  resolveIncident: (id: string) =>
+    request<Incident>(`/reliability/incidents/${id}/resolve`, { method: 'POST' }),
 }
 
 // ── Schedules ─────────────────────────────────────────────────────────────────

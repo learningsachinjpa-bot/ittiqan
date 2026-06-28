@@ -20,6 +20,11 @@ import EvaluationsPage from './pages/project/EvaluationsPage'
 import SchedulePage from './pages/project/SchedulePage'
 import SecurityFrameworksPage from './pages/project/SecurityFrameworksPage'
 import SecurityAssessmentsPage from './pages/project/SecurityAssessmentsPage'
+import ObservabilityTracesPage from './pages/project/ObservabilityTracesPage'
+import ObservabilityAlertsPage from './pages/project/ObservabilityAlertsPage'
+import ReliabilityUptimePage from './pages/project/ReliabilityUptimePage'
+import ReliabilityIncidentsPage from './pages/project/ReliabilityIncidentsPage'
+import TestingValidationsPage from './pages/project/TestingValidationsPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -88,6 +93,11 @@ export default function App() {
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="security/frameworks" element={<SecurityFrameworksPage />} />
               <Route path="security/assessments" element={<SecurityAssessmentsPage />} />
+              <Route path="observability/traces" element={<ObservabilityTracesPage />} />
+              <Route path="observability/alerts" element={<ObservabilityAlertsPage />} />
+              <Route path="reliability/uptime" element={<ReliabilityUptimePage />} />
+              <Route path="reliability/incidents" element={<ReliabilityIncidentsPage />} />
+              <Route path="testing" element={<TestingValidationsPage />} />
             </Route>
             <Route path="*" element={<CatchAllRoute />} />
           </Routes>

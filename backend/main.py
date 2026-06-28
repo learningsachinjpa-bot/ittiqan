@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import engine, Base
 import app.models  # ensure all models are registered
 
-from app.routers import auth, organizations, agents, datasets, evaluations, security, llm_providers, observability, schedules
+from app.routers import auth, organizations, agents, datasets, evaluations, security, llm_providers, observability, schedules, reliability
 
 logging.basicConfig(level=logging.INFO)
 
@@ -136,6 +136,7 @@ app.include_router(security.router, prefix="/api/v1")
 app.include_router(llm_providers.router, prefix="/api/v1")
 app.include_router(observability.router, prefix="/api/v1")
 app.include_router(schedules.router, prefix="/api/v1")
+app.include_router(reliability.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

@@ -81,16 +81,41 @@ export default function ProjectLayout() {
             <span className="flex items-center gap-2"><Activity className="w-4 h-4" />Reliability</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${relOpen ? 'rotate-180' : ''}`} />
           </button>
+          {relOpen && (
+            <div className="ml-4 space-y-1">
+              {[{ to: `${base}/reliability/uptime`, label: 'Uptime', icon: Activity }, { to: `${base}/reliability/incidents`, label: 'Incidents', icon: Activity }].map(item => (
+                <NavLink key={item.to} to={item.to} className={({ isActive }) => `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+                  <item.icon className="w-3 h-3" /> {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
 
           <button onClick={() => setObsOpen(!obsOpen)} className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white text-xs">
             <span className="flex items-center gap-2"><Monitor className="w-4 h-4" />Observability</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${obsOpen ? 'rotate-180' : ''}`} />
           </button>
+          {obsOpen && (
+            <div className="ml-4 space-y-1">
+              {[{ to: `${base}/observability/traces`, label: 'Traces', icon: Monitor }, { to: `${base}/observability/alerts`, label: 'Alerts', icon: Bell }].map(item => (
+                <NavLink key={item.to} to={item.to} className={({ isActive }) => `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+                  <item.icon className="w-3 h-3" /> {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
 
           <button onClick={() => setTestOpen(!testOpen)} className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white text-xs">
             <span className="flex items-center gap-2"><TestTube className="w-4 h-4" />Testing & Validations</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${testOpen ? 'rotate-180' : ''}`} />
           </button>
+          {testOpen && (
+            <div className="ml-4 space-y-1">
+              <NavLink to={`${base}/testing`} className={({ isActive }) => `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+                <TestTube className="w-3 h-3" /> Test History
+              </NavLink>
+            </div>
+          )}
         </nav>
 
         <div className="p-3 border-t border-gray-700">
