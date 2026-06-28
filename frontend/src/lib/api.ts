@@ -265,6 +265,20 @@ export const security = {
     request<{ id: string; attack_type: string; prompt: string; response: string; is_vulnerable: boolean; severity: string }[]>(
       `/security/${id}/findings${isVulnerable !== undefined ? `?is_vulnerable=${isVulnerable}` : ''}`
     ),
+  exportPdf: async (id: string, filename: string): Promise<void> => {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${BASE}/security/${id}/export-pdf`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    })
+    if (!res.ok) throw new Error(`Export failed: ${res.statusText}`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }
 
 // ── LLM Providers ─────────────────────────────────────────────────────────────

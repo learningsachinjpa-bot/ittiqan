@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -221,6 +221,44 @@ async def get_findings(assessment_id: str, is_vulnerable: Optional[bool] = None,
         q = q.filter(SecurityFinding.is_vulnerable == is_vulnerable)
     findings = q.all()
     return [{"id": f.id, "vulnerability_type": f.vulnerability_type, "category": f.category, "severity": f.severity, "attack_prompt": f.attack_prompt, "agent_response": f.agent_response, "is_vulnerable": f.is_vulnerable, "confidence_score": f.confidence_score, "reason": f.reason, "remediation": f.remediation} for f in findings]
+
+@router.get("/{assessment_id}/export-pdf")
+async def export_assessment_pdf(assessment_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.agent import Agent
+    from app.models.organization import OrgMember, Organization
+    from app.services.report_generator import generate_security_report
+
+    org_member = db.query(OrgMember).filter(OrgMember.user_id == user.id).first()
+    if not org_member:
+        raise HTTPException(status_code=404, detail="No organization found")
+    org_id = org_member.org_id
+
+    a = db.query(SecurityAssessment).filter(
+        SecurityAssessment.id == assessment_id,
+        SecurityAssessment.org_id == org_id,
+    ).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    if a.status != AssessmentStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Assessment is not completed yet")
+
+    agent = db.query(Agent).filter(Agent.id == a.agent_id).first()
+    org   = db.query(Organization).filter(Organization.id == org_id).first()
+    findings = db.query(SecurityFinding).filter(SecurityFinding.assessment_id == assessment_id).all()
+
+    pdf_bytes = generate_security_report(
+        assessment=a,
+        agent_name=agent.name if agent else "Unknown Agent",
+        org_name=org.name if org else "Unknown Org",
+        findings=findings,
+    )
+    safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in a.name)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="security-{safe_name}.pdf"'},
+    )
+
 
 @router.websocket("/{assessment_id}/ws")
 async def assessment_websocket(assessment_id: str, websocket: WebSocket, token: str = ""):

@@ -223,3 +223,178 @@ def generate_evaluation_report(
     doc.build(elements)
     buf.seek(0)
     return buf.read()
+
+
+def _hex(c: colors.Color) -> str:
+    """Convert a reportlab Color to a 6-char hex string (no leading #)."""
+    r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
+    return f"{r:02x}{g:02x}{b:02x}"
+
+
+def generate_security_report(
+    assessment: object,
+    agent_name: str,
+    org_name: str,
+    findings: list,
+) -> bytes:
+    """
+    Returns PDF bytes for a completed security assessment.
+    assessment — SQLAlchemy SecurityAssessment object
+    findings   — list of SecurityFinding objects
+    """
+    ORANGE = colors.HexColor("#f97316")
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=MARGIN, rightMargin=MARGIN,
+        topMargin=MARGIN, bottomMargin=MARGIN,
+        title=f"Security Assessment — {assessment.name}",
+        author="Ittiqan",
+    )
+
+    styles = getSampleStyleSheet()
+    h1 = ParagraphStyle("sh1", parent=styles["Heading1"], textColor=CYAN, fontSize=20, spaceAfter=4)
+    h2 = ParagraphStyle("sh2", parent=styles["Heading2"], textColor=BLACK, fontSize=13, spaceBefore=12, spaceAfter=4)
+    body = ParagraphStyle("sbody", parent=styles["Normal"], fontSize=9, textColor=BLACK, leading=14)
+    small = ParagraphStyle("ssmall", parent=styles["Normal"], fontSize=8, textColor=GRAY, leading=12)
+
+    elements = []
+
+    # ── Header ──────────────────────────────────────────────────────────────
+    elements.append(Paragraph("Ittiqan", ParagraphStyle("sbrand", parent=h1, fontSize=10, textColor=GRAY)))
+    elements.append(Paragraph("Security Assessment Report", h1))
+    elements.append(Spacer(1, 2 * mm))
+    elements.append(HRFlowable(width="100%", thickness=2, color=CYAN))
+    elements.append(Spacer(1, 4 * mm))
+
+    # ── Meta grid ───────────────────────────────────────────────────────────
+    risk = assessment.overall_score
+    risk_color = RED if risk and risk >= 0.7 else (AMBER if risk and risk >= 0.4 else GREEN)
+    framework_str = str(assessment.framework).replace("SecurityFramework.", "")
+    meta = [
+        ["Agent", agent_name, "Organisation", org_name],
+        ["Assessment", assessment.name, "Framework", framework_str],
+        ["Started", _fmt_dt(assessment.started_at), "Completed", _fmt_dt(assessment.completed_at)],
+        ["Total Attacks", str(assessment.total_attacks or 0), "Risk Score", _pct(risk)],
+    ]
+    meta_table = Table(meta, colWidths=[(W - 2 * MARGIN) * x for x in [0.15, 0.35, 0.15, 0.35]])
+    meta_table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("TEXTCOLOR", (0, 0), (0, -1), GRAY),
+        ("TEXTCOLOR", (2, 0), (2, -1), GRAY),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [WHITE, GRAY_LIGHT]),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("TEXTCOLOR", (3, 3), (3, 3), risk_color),
+        ("FONTNAME", (3, 3), (3, 3), "Helvetica-Bold"),
+        ("FONTSIZE", (3, 3), (3, 3), 11),
+    ]))
+    elements.append(meta_table)
+    elements.append(Spacer(1, 6 * mm))
+
+    # ── Severity summary ─────────────────────────────────────────────────────
+    elements.append(Paragraph("Vulnerability Summary", h2))
+    elements.append(Spacer(1, 2 * mm))
+    sev_rows = [
+        ["Severity", "Count"],
+        ["Critical", str(assessment.critical_count or 0)],
+        ["High",     str(assessment.high_count or 0)],
+        ["Medium",   str(assessment.medium_count or 0)],
+        ["Low",      str(assessment.low_count or 0)],
+        ["Passed",   str(assessment.passed_count or 0)],
+    ]
+    col_w = [(W - 2 * MARGIN) * x for x in [0.40, 0.20]]
+    st = Table(sev_rows, colWidths=col_w)
+    st.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), CYAN),
+        ("TEXTCOLOR",  (0, 0), (-1, 0), WHITE),
+        ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE",   (0, 0), (-1, -1), 8),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, GRAY_LIGHT]),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("ALIGN", (1, 0), (1, -1), "CENTER"),
+    ]))
+    sev_colors_map = {1: RED, 2: ORANGE, 3: AMBER, 4: GRAY, 5: GREEN}
+    for row_idx, clr in sev_colors_map.items():
+        st.setStyle(TableStyle([
+            ("TEXTCOLOR", (0, row_idx), (0, row_idx), clr),
+            ("FONTNAME",  (0, row_idx), (0, row_idx), "Helvetica-Bold"),
+        ]))
+    elements.append(st)
+    elements.append(Spacer(1, 6 * mm))
+
+    # ── Findings detail ───────────────────────────────────────────────────────
+    vuln_findings = [f for f in findings if f.is_vulnerable]
+    safe_findings  = [f for f in findings if not f.is_vulnerable]
+
+    def _sev_color(f) -> colors.Color:
+        s = str(f.severity).upper()
+        if "CRITICAL" in s: return RED
+        if "HIGH" in s:     return ORANGE
+        if "MEDIUM" in s:   return AMBER
+        return GRAY
+
+    for section_label, section_findings in [
+        ("Vulnerable Findings", vuln_findings),
+        ("Passed Attacks", safe_findings[:20]),
+    ]:
+        if not section_findings:
+            continue
+        elements.append(Paragraph(section_label, h2))
+        elements.append(Spacer(1, 2 * mm))
+
+        for idx, f in enumerate(section_findings, 1):
+            sev_str = str(f.severity).replace("VulnerabilitySeverity.", "").title()
+            sc = _sev_color(f)
+            block = []
+            block.append(Paragraph(
+                f"<b>#{idx} — {f.vulnerability_type}</b>  "
+                f"<font color='#{_hex(sc)}'>[{sev_str}]</font>  "
+                f"<font color='#6b7280'>{f.category}</font>",
+                body,
+            ))
+            if f.attack_prompt:
+                block.append(Paragraph(
+                    f"<font color='#6b7280'>Attack:</font> {str(f.attack_prompt)[:250]}",
+                    small,
+                ))
+            if f.agent_response:
+                block.append(Paragraph(
+                    f"<font color='#6b7280'>Response:</font> {str(f.agent_response)[:250]}",
+                    small,
+                ))
+            if f.reason:
+                block.append(Paragraph(
+                    f"<font color='#6b7280'>Reason:</font> {str(f.reason)[:200]}",
+                    small,
+                ))
+            if f.is_vulnerable and f.remediation:
+                block.append(Paragraph(
+                    f"<font color='#0e7490'>Remediation:</font> {str(f.remediation)[:300]}",
+                    ParagraphStyle("srem", parent=small, textColor=CYAN),
+                ))
+            block.append(HRFlowable(width="100%", thickness=0.5, color=GRAY_LIGHT, spaceAfter=2))
+            elements.append(KeepTogether(block))
+            elements.append(Spacer(1, 2 * mm))
+
+        if section_label == "Passed Attacks" and len(safe_findings) > 20:
+            elements.append(Paragraph(
+                f"<i>Showing 20 of {len(safe_findings)} passed attacks.</i>", small,
+            ))
+
+    # ── Footer ───────────────────────────────────────────────────────────────
+    elements.append(Spacer(1, 8 * mm))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=GRAY_LIGHT))
+    elements.append(Spacer(1, 2 * mm))
+    elements.append(Paragraph(
+        f"Generated by Ittiqan · {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} · CONFIDENTIAL",
+        ParagraphStyle("sfooter", parent=small, alignment=TA_CENTER),
+    ))
+
+    doc.build(elements)
+    buf.seek(0)
+    return buf.read()

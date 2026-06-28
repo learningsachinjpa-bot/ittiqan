@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { security as securityApi, llmProviders, getWsUrl } from '../../lib/api'
 import type { LLMProvider, SecurityAssessment } from '../../types'
-import { Shield, AlertTriangle, ChevronRight, ChevronDown, AlertCircle } from 'lucide-react'
+import { Shield, AlertTriangle, ChevronRight, ChevronDown, AlertCircle, Download } from 'lucide-react'
 
 const FRAMEWORKS: Record<string, { label: string; description: string; icon: string; categories: string[] }> = {
   owasp_llm: {
@@ -107,6 +107,7 @@ export default function SecurityAssessmentsPage() {
   const [liveRuns, setLiveRuns] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [findings, setFindings] = useState<Record<string, any[]>>({})
+  const [exportingId, setExportingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!agentId) return
@@ -120,6 +121,18 @@ export default function SecurityAssessmentsPage() {
         if (defJudge) setJudgeId(defJudge.id)
       }).catch(console.error).finally(() => setLoading(false))
   }, [agentId])
+
+  const handleExportPdf = async (a: SecurityAssessment) => {
+    setExportingId(a.id)
+    try {
+      const safe = a.name.replace(/[^a-z0-9-_]/gi, '_')
+      await securityApi.exportPdf(a.id, `security-${safe}.pdf`)
+    } catch (e) {
+      console.error('PDF export failed', e)
+    } finally {
+      setExportingId(null)
+    }
+  }
 
   const handleCreate = async () => {
     if (!selectedFramework) return setStartError('Select a framework.')
@@ -221,6 +234,16 @@ export default function SecurityAssessmentsPage() {
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                         {a.vulnerable_count} vulnerable
                       </div>
+                    )}
+                    {a.status === 'completed' && (
+                      <button
+                        onClick={() => handleExportPdf(a)}
+                        disabled={exportingId === a.id}
+                        title="Download PDF report"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 disabled:opacity-50"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
                     )}
                     <button onClick={() => expandedId === a.id ? setExpandedId(null) : loadFindings(a.id)}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50">
