@@ -374,3 +374,42 @@ export const healthMonitor = {
   setInterval: (minutes: number) =>
     request<{ check_interval_minutes: number }>('/health/config', { method: 'PUT', body: JSON.stringify({ minutes }) }),
 }
+
+// ── Approval Gateway ──────────────────────────────────────────────────────────
+
+export interface ApprovalRequest {
+  id: string; org_id: string; agent_id?: string
+  action_type: string; action_title: string
+  action_description?: string; action_payload?: Record<string, unknown>
+  urgency: 'low' | 'normal' | 'high' | 'critical'
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled'
+  review_note?: string; reviewed_by?: string
+  callback_url?: string
+  created_at: string; expires_at?: string; reviewed_at?: string
+}
+
+export interface ApprovalStats {
+  pending: number; approved: number; rejected: number
+  expired: number; cancelled: number; total: number
+}
+
+export const approvalGateway = {
+  queue: (agentId?: string) =>
+    request<ApprovalRequest[]>(`/approvals/queue${agentId ? `?agent_id=${agentId}` : ''}`),
+  history: (params?: { status?: string; agent_id?: string; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.agent_id) q.set('agent_id', params.agent_id)
+    if (params?.limit) q.set('limit', String(params.limit))
+    return request<ApprovalRequest[]>(`/approvals/history?${q}`)
+  },
+  stats: () => request<ApprovalStats>('/approvals/stats'),
+  get: (id: string) => request<ApprovalRequest>(`/approvals/${id}`),
+  approve: (id: string, note?: string) =>
+    request<ApprovalRequest>(`/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ note }) }),
+  reject: (id: string, note: string) =>
+    request<ApprovalRequest>(`/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) }),
+  apiKeyInfo: () => request<{ has_key: boolean; created_at?: string }>('/approvals/api-key'),
+  generateApiKey: () => request<{ api_key: string; created_at: string }>('/approvals/api-key/generate', { method: 'POST' }),
+  revokeApiKey: () => request<{ revoked: boolean }>('/approvals/api-key', { method: 'DELETE' }),
+}

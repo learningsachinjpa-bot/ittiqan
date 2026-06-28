@@ -159,6 +159,40 @@ async def run_health_checks() -> list[dict]:
         db.close()
 
 
+async def expire_approval_requests() -> None:
+    """Mark PENDING approval requests past their expires_at as EXPIRED, fire callbacks."""
+    from app.models.approval import ApprovalRequest, ApprovalStatus
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        expired = db.query(ApprovalRequest).filter(
+            ApprovalRequest.status == ApprovalStatus.PENDING,
+            ApprovalRequest.expires_at <= now,
+        ).all()
+        for req in expired:
+            req.status = ApprovalStatus.EXPIRED
+            req.reviewed_at = now
+            if req.callback_url:
+                try:
+                    import httpx
+                    from app.core.ssrf import validate_url
+                    validate_url(req.callback_url)
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        await client.post(req.callback_url, json={
+                            "id": req.id, "status": "expired",
+                            "action_type": req.action_type, "action_title": req.action_title,
+                        })
+                except Exception:
+                    pass
+        if expired:
+            db.commit()
+            logger.info("Expired %d approval request(s)", len(expired))
+    except Exception as exc:
+        logger.error("Approval expiry job failed: %s", exc)
+    finally:
+        db.close()
+
+
 def start_scheduler() -> None:
     global _scheduler
     _scheduler = AsyncIOScheduler()
@@ -167,6 +201,13 @@ def start_scheduler() -> None:
         trigger=IntervalTrigger(minutes=_check_interval_minutes),
         id="health_check",
         name="Agent health checks",
+        replace_existing=True,
+    )
+    _scheduler.add_job(
+        expire_approval_requests,
+        trigger=IntervalTrigger(minutes=2),
+        id="approval_expiry",
+        name="Approval request expiry",
         replace_existing=True,
     )
     _scheduler.start()

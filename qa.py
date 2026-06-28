@@ -537,7 +537,7 @@ def gate1_code():
 
         # Check: form buttons disabled during loading
         submit_buttons = re.findall(r'type="submit"|onClick=\{handle|onClick=\{submit', content)
-        disabled_check = re.findall(r'disabled=\{(?:loading|saving|uploading|starting|deleting|inviting|removing|submitting)', content)
+        disabled_check = re.findall(r'disabled=\{(?:loading|saving|uploading|starting|deleting|inviting|removing|submitting|acting)', content)
         if len(submit_buttons) > 0 and len(disabled_check) == 0:
             record("high", "G1", rel,
                    "Submit/action buttons exist but none has disabled={loading} — allows double-submit",
@@ -565,8 +565,12 @@ def gate2_backend():
 
         # 2.1 Auth: every non-auth router endpoint needs auth
         # Intentionally public endpoints (metadata/config, no user data returned):
-        PUBLIC_ENDPOINTS = {"list_frameworks", "list_available_metrics", "get_supported_models"}
-        AUTH_INDICATORS = {"get_current_user", "require_role", "ws_get_current_user"}
+        PUBLIC_ENDPOINTS = {
+            "list_frameworks", "list_available_metrics", "get_supported_models",
+            # Agent-facing approval endpoints: auth via org API key (Bearer itq_...), not JWT
+            "submit_approval_request", "poll_approval_status", "cancel_request",
+        }
+        AUTH_INDICATORS = {"get_current_user", "require_role", "ws_get_current_user", "_get_org_by_api_key"}
         if fname != "auth":
             # Split file into per-endpoint blocks so we can check multi-line signatures + body
             fn_names = re.findall(r'@router\.\w+[^\n]*\nasync def (\w+)', content)
@@ -602,6 +606,8 @@ def gate2_backend():
                 return False  # uniqueness check — not a data-leak query
             if ".email ==" in q:
                 return False  # user lookup by email — single record, not cross-org list
+            if ".api_key ==" in q:
+                return False  # org lookup by unique API key — single record, not cross-org list
             return True
         unscoped = [q for q in db_queries if _is_unscoped(q)] if fname != "auth" else []
         if unscoped:

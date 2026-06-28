@@ -1,12 +1,25 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { LayoutDashboard, FolderOpen, Box, Users, CreditCard, BarChart2, Zap, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { LayoutDashboard, FolderOpen, Box, Users, CreditCard, BarChart2, Zap, ChevronDown, ShieldCheck } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { approvalGateway } from '../lib/api'
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [showUser, setShowUser] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    function fetchPending() {
+      approvalGateway.stats()
+        .then(s => setPendingCount(s.pending))
+        .catch(() => {})
+    }
+    fetchPending()
+    const t = setInterval(fetchPending, 30000)
+    return () => clearInterval(t)
+  }, [])
 
   const navItems = [
     { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -65,6 +78,28 @@ export default function DashboardLayout() {
                 {item.label}
               </NavLink>
             ))}
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase tracking-wider mb-2 px-2">Governance</p>
+            <NavLink
+              to="/dashboard/approvals"
+              className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span className="flex-1">Approvals</span>
+              {pendingCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
+            </NavLink>
+            <NavLink
+              to="/dashboard/approvals/history"
+              className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            >
+              <ShieldCheck className="w-4 h-4 opacity-50" />
+              <span>Audit Trail</span>
+            </NavLink>
           </div>
           <div>
             <p className="text-gray-500 text-xs uppercase tracking-wider mb-2 px-2">Administration</p>

@@ -31,6 +31,10 @@ class Organization(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # API key for agent-to-Ittiqan calls (approval gateway auth)
+    api_key = Column(String(64), nullable=True, unique=True, index=True)
+    api_key_created_at = Column(DateTime, nullable=True)
+
     # Limits based on plan
     max_agents = Column(Integer, default=3)
     max_evaluations_per_month = Column(Integer, default=100)
