@@ -7,3 +7,4 @@ from app.models.security import SecurityAssessment, SecurityFinding
 from app.models.llm_provider import LLMProvider
 from app.models.observability import Trace, Alert
 from app.models.schedule import Schedule
+from app.models.incident import Incident, IncidentSeverity, IncidentStatus

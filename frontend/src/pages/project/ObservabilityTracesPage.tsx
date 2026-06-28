@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { observability, Trace, ObsMetrics } from '../../lib/api'
+import { observability } from '../../lib/api'
+import type { Trace, ObsMetrics } from '../../lib/api'
 
 function MetricCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -27,15 +28,19 @@ export default function ObservabilityTracesPage() {
   const [selected, setSelected] = useState<Trace | null>(null)
   const [detail, setDetail] = useState<{ input?: string; output?: string; spans: unknown[] } | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   useEffect(() => {
     setLoading(true)
+    setFetchError('')
     Promise.all([
       observability.traces(agentId, hours),
       observability.metrics(agentId, hours),
     ]).then(([t, m]) => {
       setTraces(t)
       setMetrics(m)
+    }).catch(err => {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load traces')
     }).finally(() => setLoading(false))
   }, [agentId, hours])
 
@@ -67,6 +72,10 @@ export default function ObservabilityTracesPage() {
           ))}
         </select>
       </div>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{fetchError}</div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-4 gap-4">

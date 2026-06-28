@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { evaluations, agents, Agent } from '../../lib/api'
+import { evaluations, agents } from '../../lib/api'
+import type { Agent } from '../../types'
 
 interface Evaluation {
   id: string; name: string; status: string; overall_score?: number

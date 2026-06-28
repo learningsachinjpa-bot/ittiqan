@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { reliability, UptimeEntry } from '../../lib/api'
+import { reliability } from '../../lib/api'
+import type { UptimeEntry } from '../../lib/api'
 
 function UptimeBadge({ pct }: { pct: number }) {
   const color = pct >= 99 ? 'text-green-600 bg-green-50' : pct >= 95 ? 'text-yellow-600 bg-yellow-50' : 'text-red-600 bg-red-50'

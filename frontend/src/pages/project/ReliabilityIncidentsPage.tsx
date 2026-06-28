@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { reliability, Incident } from '../../lib/api'
+import { reliability } from '../../lib/api'
+import type { Incident } from '../../lib/api'
 
 const SEV_COLOR: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700',

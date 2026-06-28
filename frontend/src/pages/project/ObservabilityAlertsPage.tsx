@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { observability, ObsAlert } from '../../lib/api'
+import { observability } from '../../lib/api'
+import type { ObsAlert } from '../../lib/api'
 
 const SEV_COLOR: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700',

@@ -1,47 +1,18 @@
-import enum
-import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import Column, String, DateTime, Integer, Text, Enum as SAEnum, ForeignKey
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from app.core.database import get_db, Base
+from app.core.database import get_db
 from app.core.security import get_current_user, require_role, get_client_ip
 from app.models.user import User
 from app.models.organization import OrgMember, AuditLog
 from app.models.observability import Trace, TraceStatus
 from app.models.agent import Agent
+from app.models.incident import Incident, IncidentSeverity, IncidentStatus
 
 router = APIRouter(prefix="/reliability", tags=["reliability"])
-
-
-class IncidentSeverity(str, enum.Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class IncidentStatus(str, enum.Enum):
-    OPEN = "open"
-    INVESTIGATING = "investigating"
-    RESOLVED = "resolved"
-
-
-class Incident(Base):
-    __tablename__ = "incidents"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    org_id = Column(String, ForeignKey("organizations.id"), nullable=False)
-    agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
-    title = Column(String(300), nullable=False)
-    description = Column(Text, nullable=True)
-    severity = Column(SAEnum(IncidentSeverity), default=IncidentSeverity.MEDIUM)
-    status = Column(SAEnum(IncidentStatus), default=IncidentStatus.OPEN)
-    created_by = Column(String, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    resolved_at = Column(DateTime, nullable=True)
 
 
 def _get_member(db: Session, user_id: str) -> OrgMember:
