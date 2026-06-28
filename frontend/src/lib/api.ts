@@ -362,6 +362,25 @@ export const observability = {
       `/observability/alerts/evaluate${agentId ? `?agent_id=${agentId}` : ''}`,
       { method: 'POST' }
     ),
+  webhookDeliveries: (alertId: string) =>
+    request<WebhookDelivery[]>(`/observability/alerts/${alertId}/webhook-deliveries`),
+  testWebhook: (alertId: string, url: string) =>
+    request<{ status: string; http_status: number | null; duration_ms: number; error: string | null }>(
+      `/observability/alerts/${alertId}/test-webhook`,
+      { method: 'POST', body: JSON.stringify({ url }) }
+    ),
+}
+
+export interface WebhookDelivery {
+  id: string
+  url: string
+  status: 'success' | 'failed'
+  http_status: number | null
+  response_body: string | null
+  error_message: string | null
+  duration_ms: number | null
+  is_test: boolean
+  created_at: string
 }
 
 // ── Reliability ───────────────────────────────────────────────────────────────

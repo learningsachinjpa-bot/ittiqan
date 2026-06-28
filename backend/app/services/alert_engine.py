@@ -49,15 +49,59 @@ def _severity_map(alert_severity: str) -> IncidentSeverity:
     return mapping.get(alert_severity, IncidentSeverity.MEDIUM)
 
 
-async def _fire_webhook(url: str, payload: dict) -> None:
+async def _fire_webhook(
+    url: str,
+    payload: dict,
+    org_id: str | None = None,
+    alert_id: str | None = None,
+    is_test: bool = False,
+    db: Session | None = None,
+) -> dict:
+    """Fire a webhook and log the delivery attempt. Returns a status dict."""
+    from app.core.ssrf import validate_url
+    from app.models.webhook_delivery import WebhookDelivery
+    import time
+
+    status = "failed"
+    http_status = None
+    response_body = None
+    error_message = None
+    start = time.monotonic()
+
     try:
-        from app.core.ssrf import validate_url
         validate_url(url)
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(url, json=payload)
-        logger.info("Webhook fired: %s", url)
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.post(url, json=payload)
+        http_status = resp.status_code
+        response_body = resp.text[:500] if resp.text else None
+        status = "success" if resp.status_code < 400 else "failed"
+        logger.info("Webhook fired: %s → %s", url, resp.status_code)
     except Exception as exc:
+        error_message = str(exc)[:500]
         logger.warning("Webhook delivery failed (%s): %s", url, exc)
+
+    duration_ms = int((time.monotonic() - start) * 1000)
+
+    if org_id and (db is not None):
+        try:
+            delivery = WebhookDelivery(
+                org_id=org_id,
+                alert_id=alert_id,
+                url=url,
+                payload=payload,
+                status=status,
+                http_status=http_status,
+                response_body=response_body,
+                error_message=error_message,
+                duration_ms=duration_ms,
+                is_test=is_test,
+            )
+            db.add(delivery)
+            db.commit()
+        except Exception:
+            logger.exception("Failed to log webhook delivery")
+
+    return {"status": status, "http_status": http_status, "duration_ms": duration_ms, "error": error_message}
 
 
 async def _fire_alert(alert: Alert, metric_value: float, db: Session) -> None:
@@ -125,7 +169,7 @@ async def _fire_alert(alert: Alert, metric_value: float, db: Session) -> None:
         if channel_type == "webhook":
             url = channel.get("url", "")
             if url:
-                await _fire_webhook(url, payload)
+                await _fire_webhook(url, payload, org_id=alert.org_id, alert_id=alert.id, db=db)
         elif channel_type == "email":
             address = channel.get("address", "")
             if address:

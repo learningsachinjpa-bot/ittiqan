@@ -269,3 +269,80 @@ async def trigger_alert_evaluation(
     from app.services.alert_engine import evaluate_alerts
     fired = await evaluate_alerts(org_id=m.org_id, agent_id=agent_id)
     return {"fired_count": len(fired), "fired": fired}
+
+
+# ── Webhook delivery log ───────────────────────────────────────────────────────
+
+@router.get("/alerts/{alert_id}/webhook-deliveries")
+async def get_webhook_deliveries(
+    alert_id: str,
+    limit: int = 20,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return recent webhook delivery attempts for an alert."""
+    from app.models.webhook_delivery import WebhookDelivery
+    m = get_user_org_member(db, user.id)
+    a = db.query(Alert).filter(Alert.id == alert_id, Alert.org_id == m.org_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    deliveries = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.alert_id == alert_id)
+        .order_by(WebhookDelivery.created_at.desc())
+        .limit(min(limit, 50))
+        .all()
+    )
+    return [
+        {
+            "id": d.id,
+            "url": d.url,
+            "status": d.status,
+            "http_status": d.http_status,
+            "response_body": d.response_body,
+            "error_message": d.error_message,
+            "duration_ms": d.duration_ms,
+            "is_test": d.is_test,
+            "created_at": d.created_at.isoformat(),
+        }
+        for d in deliveries
+    ]
+
+
+class TestWebhookRequest(BaseModel):
+    url: str
+
+@router.post("/alerts/{alert_id}/test-webhook")
+async def test_webhook(
+    alert_id: str,
+    body: TestWebhookRequest,
+    user: User = Depends(require_role(*_WRITE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Send a test ping to a webhook URL and log the delivery attempt."""
+    from app.core.ssrf import validate_url
+    from app.services.alert_engine import _fire_webhook
+    m = get_user_org_member(db, user.id)
+    a = db.query(Alert).filter(Alert.id == alert_id, Alert.org_id == m.org_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    try:
+        validate_url(body.url)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    payload = {
+        "type": "test",
+        "alert_id": alert_id,
+        "alert_name": a.name,
+        "message": "This is a test webhook from Ittiqan.",
+        "sent_at": datetime.utcnow().isoformat(),
+    }
+    result = await _fire_webhook(
+        url=body.url,
+        payload=payload,
+        org_id=m.org_id,
+        alert_id=alert_id,
+        is_test=True,
+        db=db,
+    )
+    return result

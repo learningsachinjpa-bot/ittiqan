@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { observability } from '../../lib/api'
-import type { ObsAlert, AlertChannel } from '../../lib/api'
+import type { ObsAlert, AlertChannel, WebhookDelivery } from '../../lib/api'
 
 const SEV_COLOR: Record<string, string> = {
   low: 'bg-blue-100 text-blue-700',
@@ -52,6 +52,12 @@ export default function ObservabilityAlertsPage() {
   const [channelValue, setChannelValue] = useState('')
   const [channelSaving, setChannelSaving] = useState(false)
   const [channelError, setChannelError] = useState('')
+  // Webhook delivery history: alertId → deliveries
+  const [deliveries, setDeliveries] = useState<Record<string, WebhookDelivery[]>>({})
+  const [deliveryLoading, setDeliveryLoading] = useState<string | null>(null)
+  // Test webhook: alertId+url → result
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null)  // `${alertId}:${url}`
+  const [testResults, setTestResults] = useState<Record<string, { status: string; http_status: number | null; duration_ms: number; error: string | null }>>({})
 
   function load() {
     setLoading(true)
@@ -139,6 +145,33 @@ export default function ObservabilityAlertsPage() {
       setFetchError(err instanceof Error ? err.message : 'Evaluation failed')
     } finally {
       setEvaluating(false)
+    }
+  }
+
+  async function loadDeliveries(alertId: string) {
+    setDeliveryLoading(alertId)
+    try {
+      const data = await observability.webhookDeliveries(alertId)
+      setDeliveries(prev => ({ ...prev, [alertId]: data }))
+    } catch {
+      // non-critical, leave empty
+    } finally {
+      setDeliveryLoading(null)
+    }
+  }
+
+  async function handleTestWebhook(alertId: string, url: string) {
+    const key = `${alertId}:${url}`
+    setTestingWebhook(key)
+    try {
+      const result = await observability.testWebhook(alertId, url)
+      setTestResults(prev => ({ ...prev, [key]: result }))
+      // Reload delivery history so the test ping appears
+      loadDeliveries(alertId)
+    } catch (e) {
+      setTestResults(prev => ({ ...prev, [key]: { status: 'failed', http_status: null, duration_ms: 0, error: e instanceof Error ? e.message : 'Test failed' } }))
+    } finally {
+      setTestingWebhook(null)
     }
   }
 
@@ -322,7 +355,13 @@ export default function ObservabilityAlertsPage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <button
-                          onClick={() => { setChannelAlertId(channelAlertId === a.id ? null : a.id); setChannelValue(''); setChannelError('') }}
+                          onClick={() => {
+                            const opening = channelAlertId !== a.id
+                            setChannelAlertId(opening ? a.id : null)
+                            setChannelValue('')
+                            setChannelError('')
+                            if (opening) loadDeliveries(a.id)
+                          }}
                           className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
                           title="Manage notification channels"
                         >
@@ -340,13 +379,58 @@ export default function ObservabilityAlertsPage() {
                           {(a.notification_channels ?? []).length === 0 && (
                             <p className="text-xs text-gray-400">No channels yet — add one below</p>
                           )}
-                          {(a.notification_channels ?? []).map((ch, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-xs">
-                              <span className={`px-1.5 py-0.5 rounded font-medium ${ch.type === 'email' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{ch.type}</span>
-                              <span className="text-gray-700 font-mono">{ch.type === 'email' ? ch.address : ch.url}</span>
-                              <button onClick={() => handleRemoveChannel(a.id, idx)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
-                            </div>
-                          ))}
+                          {(a.notification_channels ?? []).map((ch, idx) => {
+                            const webhookUrl = ch.type === 'webhook' ? (ch.url ?? '') : ''
+                            const testKey = `${a.id}:${webhookUrl}`
+                            const testResult = testResults[testKey]
+                            const isTesting = testingWebhook === testKey
+                            const alertDeliveries = (deliveries[a.id] ?? []).filter(d => d.url === webhookUrl)
+                            return (
+                              <div key={idx} className="space-y-1">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className={`px-1.5 py-0.5 rounded font-medium ${ch.type === 'email' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{ch.type}</span>
+                                  <span className="text-gray-700 font-mono truncate max-w-xs">{ch.type === 'email' ? ch.address : ch.url}</span>
+                                  {ch.type === 'webhook' && webhookUrl && (
+                                    <button
+                                      onClick={() => handleTestWebhook(a.id, webhookUrl)}
+                                      disabled={isTesting}
+                                      className="text-xs border border-cyan-300 text-cyan-600 hover:bg-cyan-50 px-2 py-0.5 rounded disabled:opacity-50"
+                                    >
+                                      {isTesting ? '…' : 'Test'}
+                                    </button>
+                                  )}
+                                  <button onClick={() => handleRemoveChannel(a.id, idx)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+                                </div>
+                                {/* Inline test result */}
+                                {testResult && ch.type === 'webhook' && webhookUrl && testResults[testKey] && (
+                                  <div className={`text-xs px-2 py-1 rounded ${testResult.status === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                    {testResult.status === 'success'
+                                      ? `✓ HTTP ${testResult.http_status} · ${testResult.duration_ms}ms`
+                                      : `✗ ${testResult.error ?? `HTTP ${testResult.http_status}`}`}
+                                  </div>
+                                )}
+                                {/* Delivery history */}
+                                {ch.type === 'webhook' && alertDeliveries.length > 0 && (
+                                  <div className="ml-1 border-l-2 border-gray-100 pl-2 space-y-0.5">
+                                    <p className="text-xs text-gray-400 font-medium">Recent deliveries</p>
+                                    {alertDeliveries.slice(0, 5).map(d => (
+                                      <div key={d.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                        <span className={`font-medium ${d.status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                                          {d.status === 'success' ? '✓' : '✗'}
+                                        </span>
+                                        {d.http_status && <span className="text-gray-400">HTTP {d.http_status}</span>}
+                                        {d.duration_ms != null && <span className="text-gray-400">{d.duration_ms}ms</span>}
+                                        {d.is_test && <span className="bg-gray-100 text-gray-500 px-1 rounded">test</span>}
+                                        <span className="text-gray-300">{new Date(d.created_at).toLocaleTimeString()}</span>
+                                        {d.error_message && <span className="text-red-500 truncate max-w-xs" title={d.error_message}>{d.error_message.slice(0, 60)}</span>}
+                                      </div>
+                                    ))}
+                                    {deliveryLoading === a.id && <p className="text-xs text-gray-400">Loading…</p>}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                           <div className="flex items-center gap-2 pt-1">
                             <select
                               value={channelType}
