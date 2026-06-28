@@ -204,6 +204,13 @@ async def _run_evaluation_task(eval_id: str, agent: Agent, test_cases: list, met
         agent.last_evaluated_at = datetime.utcnow()
         db.commit()
 
+        # Automatic regression detection — compare against previous run
+        try:
+            from app.services.alert_engine import check_eval_regression
+            await check_eval_regression(eval_id)
+        except Exception:
+            pass
+
         for ws in active_ws_connections.get(eval_id, []):
             try:
                 await ws.send_json({"type": "completed", "overall_score": results["overall_score"], "metric_scores": results["metric_scores"], "passed_count": results["passed_count"], "failed_count": results["failed_count"]})

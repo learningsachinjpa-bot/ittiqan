@@ -114,6 +114,7 @@ export default function AgentsRegistryPage() {
                   {agent.enable_multi_turn ? '💬 Multi-turn' : '💬 Single-turn'}
                   {agent.endpoint_url ? ' · 🔗 Connected' : ' · ⚠ No endpoint'}
                 </span>
+                <button onClick={() => navigate(`/dashboard/quickstart/${agent.id}`)} title="Integration guide" className="text-gray-400 hover:text-cyan-600 text-xs font-medium">{'</>'}</button>
                 <button onClick={() => navigate(`/project/${agent.id}`)} className="text-cyan-500 hover:text-cyan-600"><ArrowRight className="w-4 h-4" /></button>
               </div>
             </div>

@@ -313,7 +313,25 @@ export default function EvaluationsPage() {
                 </div>
 
                 <div className="flex items-center gap-4 flex-shrink-0">
-                  {ev.overall_score != null && <ScoreBar score={ev.overall_score} />}
+                  {ev.overall_score != null && (() => {
+                    // Find previous completed eval for same dataset, sorted newest-first
+                    const completed = evals
+                      .filter(e => e.status === 'completed' && e.dataset_id === ev.dataset_id && e.overall_score != null)
+                      .sort((a, b) => new Date(b.completed_at ?? 0).getTime() - new Date(a.completed_at ?? 0).getTime())
+                    const idx = completed.findIndex(e => e.id === ev.id)
+                    const prev = completed[idx + 1]
+                    const delta = prev ? (ev.overall_score! - prev.overall_score!) : null
+                    return (
+                      <div className="flex items-center gap-2">
+                        {delta !== null && Math.abs(delta) >= 0.01 && (
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${delta >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {delta >= 0 ? '▲' : '▼'}{Math.round(Math.abs(delta) * 100)}pp
+                          </span>
+                        )}
+                        <ScoreBar score={ev.overall_score!} />
+                      </div>
+                    )
+                  })()}
                   {ev.overall_score == null && ev.status !== 'failed' && (
                     <div className="text-xs text-gray-400">{ev.completed_cases || 0}/{ev.total_cases} done</div>
                   )}

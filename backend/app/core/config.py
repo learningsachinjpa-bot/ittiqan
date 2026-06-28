@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     SMTP_FROM: Optional[str] = None          # "Ittiqan <noreply@yourapp.com>"
     SMTP_USE_TLS: bool = True                # STARTTLS on port 587; set False for port 465 SSL
 
+    # Stripe — all optional; billing features are disabled when not configured
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_PRO_PRICE_ID: Optional[str] = None       # monthly Pro price ID from Stripe dashboard
+    STRIPE_ENTERPRISE_PRICE_ID: Optional[str] = None
+
+    @property
+    def stripe_enabled(self) -> bool:
+        return bool(self.STRIPE_SECRET_KEY)
+
     @property
     def email_enabled(self) -> bool:
         return bool(self.SMTP_HOST and self.SMTP_USER and self.SMTP_PASSWORD and self.SMTP_FROM)

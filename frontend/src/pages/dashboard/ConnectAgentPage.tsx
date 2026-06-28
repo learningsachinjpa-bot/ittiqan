@@ -4,7 +4,7 @@ import { Check } from 'lucide-react'
 import { agents as agentsApi, llmProviders } from '../../lib/api'
 import type { LLMProvider } from '../../types'
 
-const STEPS = ['Basics', 'Evaluation', 'Metrics', 'API Config', 'LLM Judge']
+const STEPS = ['Identity', 'Quality & Metrics', 'Integration']
 
 // id = backend snake_case key — matches DeepEval metric class names
 // testCaseType: which DeepEval test case schema this metric requires
@@ -185,7 +185,7 @@ export default function ConnectAgentPage() {
   }
 
   const goToStep = (target: number) => {
-    // When leaving step 2 for step 3, apply selection if nothing manually chosen
+    // When leaving step 1 (Quality & Metrics), apply selection if nothing manually chosen
     if (step === 1 && target === 2) {
       const anyEnabled = metrics.some(m => m.enabled)
       if (!anyEnabled) {
@@ -254,7 +254,7 @@ export default function ConnectAgentPage() {
         default_metrics: enabledMetrics.map(m => m.id),
         llm_judge_provider_id: llmJudgeProviderId || undefined,
       })
-      navigate(`/project/${agent.id}`)
+      navigate(`/dashboard/quickstart/${agent.id}`)
     } catch (e: any) {
       setSaveError(e.message || 'Failed to connect agent. Check all required fields.')
     } finally {
@@ -325,7 +325,7 @@ export default function ConnectAgentPage() {
           </div>
         )}
 
-        {/* Step 2: Evaluation Approach */}
+        {/* Step 2: Quality & Metrics (Evaluation Approach + Metrics + LLM Judge) */}
         {step === 1 && (
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">Evaluation Approach</h2>
@@ -384,9 +384,9 @@ export default function ConnectAgentPage() {
           </div>
         )}
 
-        {/* Step 3: Metrics */}
-        {step === 2 && (
-          <div>
+        {/* Step 2b: Metrics (part of Quality & Metrics step) */}
+        {step === 1 && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Metrics Configuration</h2>
             {/* Context banner — explains WHY these metrics are shown */}
             {!showAllMetrics && _selectionIds.size > 0 && (
@@ -438,7 +438,7 @@ export default function ConnectAgentPage() {
                 {filteredMetrics.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm text-gray-400">
                     {capabilities.length === 0 && selectedCategories.length === 0
-                      ? 'Select capabilities in Step 2 to see relevant metrics.'
+                      ? 'Select capabilities above to see relevant metrics.'
                       : 'No metrics match your filter.'}
                   </div>
                 ) : filteredMetrics.map((m, i) => {
@@ -494,11 +494,11 @@ export default function ConnectAgentPage() {
           </div>
         )}
 
-        {/* Step 4: API Config */}
-        {step === 3 && (
+        {/* Step 3: Integration (API Config + LLM Judge) */}
+        {step === 2 && (
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">API Configuration</h2>
-            <p className="text-gray-500 text-sm mb-6">Configure how the system calls your chatbot or agent API.</p>
+            <p className="text-gray-500 text-sm mb-6">Configure how the system calls your agent API. <span className="text-gray-400">(Optional — you can add this later)</span></p>
             <div className="mb-4">
               <label htmlFor="connect-quick-preset" className="block text-sm font-medium text-gray-700 mb-1">Quick Setup Preset</label>
               <select id="connect-quick-preset" onChange={e => {
@@ -552,9 +552,9 @@ export default function ConnectAgentPage() {
           </div>
         )}
 
-        {/* Step 5: LLM Judge */}
-        {step === 4 && (
-          <div>
+        {/* Step 3b: LLM Judge (part of Integration step) */}
+        {step === 2 && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
             <h2 className="text-xl font-bold text-gray-900 mb-1">LLM Judge Selection</h2>
             <p className="text-gray-500 text-sm mb-6">Select the default LLM judge for your agent evaluations.</p>
             <label htmlFor="connect-judge-provider" className="block text-sm font-medium text-gray-700 mb-1">Default Judge <span className="text-red-500">*</span></label>
@@ -595,7 +595,7 @@ export default function ConnectAgentPage() {
           {step < STEPS.length - 1 ? (
             <button onClick={() => goToStep(step + 1)} className="flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-lg hover:bg-cyan-600 text-sm font-medium">Next →</button>
           ) : (
-            <button onClick={() => setShowReview(true)} disabled={!agentName || !apiUrl} className="flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-lg hover:bg-cyan-600 text-sm font-medium disabled:opacity-50">Review & Connect</button>
+            <button onClick={() => setShowReview(true)} disabled={!agentName} className="flex items-center gap-2 bg-cyan-500 text-white px-5 py-2.5 rounded-lg hover:bg-cyan-600 text-sm font-medium disabled:opacity-50">Review & Connect</button>
           )}
         </div>
       </div>

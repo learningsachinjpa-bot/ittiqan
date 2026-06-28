@@ -27,6 +27,8 @@ import ReliabilityIncidentsPage from './pages/project/ReliabilityIncidentsPage'
 import TestingValidationsPage from './pages/project/TestingValidationsPage'
 import ApprovalsQueuePage from './pages/approvals/ApprovalsQueuePage'
 import ApprovalsHistoryPage from './pages/approvals/ApprovalsHistoryPage'
+import QuickStartPage from './pages/dashboard/QuickStartPage'
+import AgentComparisonPage from './pages/dashboard/AgentComparisonPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -88,6 +90,8 @@ export default function App() {
               <Route path="usage" element={<UsagePage />} />
               <Route path="approvals" element={<ApprovalsQueuePage />} />
               <Route path="approvals/history" element={<ApprovalsHistoryPage />} />
+              <Route path="quickstart/:agentId" element={<QuickStartPage />} />
+              <Route path="compare" element={<AgentComparisonPage />} />
             </Route>
             <Route path="/project/:id" element={<ProtectedRoute><ProjectLayout /></ProtectedRoute>}>
               <Route index element={<ProjectOverviewPage />} />

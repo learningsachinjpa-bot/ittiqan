@@ -255,3 +255,107 @@ async def evaluate_alerts(org_id: str | None = None, agent_id: str | None = None
         return []
     finally:
         db.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Automatic eval regression check
+# Called right after an evaluation reaches COMPLETED status.
+# Fires a notification if the new score dropped >= REGRESSION_THRESHOLD vs the
+# previous run on the same agent (no user-defined alert required).
+# ─────────────────────────────────────────────────────────────────────────────
+
+REGRESSION_THRESHOLD = 0.05  # 5 percentage points
+
+async def check_eval_regression(eval_id: str) -> None:
+    """Compare newly-completed eval against its predecessor; fire notification on regression."""
+    from app.models.evaluation import Evaluation, EvaluationStatus
+    from app.models.agent import Agent as AgentModel
+    from app.models.organization import Organization
+
+    db = SessionLocal()
+    try:
+        current = db.query(Evaluation).filter(
+            Evaluation.id == eval_id,
+            Evaluation.status == EvaluationStatus.COMPLETED,
+            Evaluation.overall_score.isnot(None),
+        ).first()
+        if not current:
+            return
+
+        previous = (
+            db.query(Evaluation)
+            .filter(
+                Evaluation.org_id == current.org_id,
+                Evaluation.agent_id == current.agent_id,
+                Evaluation.dataset_id == current.dataset_id,
+                Evaluation.status == EvaluationStatus.COMPLETED,
+                Evaluation.overall_score.isnot(None),
+                Evaluation.id != current.id,
+                Evaluation.completed_at < current.completed_at,
+            )
+            .order_by(Evaluation.completed_at.desc())
+            .first()
+        )
+        if not previous:
+            return
+
+        drop = previous.overall_score - current.overall_score
+        if drop < REGRESSION_THRESHOLD:
+            return
+
+        agent = db.query(AgentModel).filter(AgentModel.id == current.agent_id).first()
+        org   = db.query(Organization).filter(Organization.id == current.org_id).first()
+        agent_name = agent.name if agent else current.agent_id
+        org_name   = org.name   if org   else current.org_id
+
+        incident_title = (
+            f"Eval regression — {agent_name}: "
+            f"{round(previous.overall_score * 100)}% → {round(current.overall_score * 100)}% "
+            f"(−{round(drop * 100)}pp)"
+        )
+        incident = Incident(
+            org_id=current.org_id,
+            agent_id=current.agent_id,
+            title=incident_title,
+            description=(
+                f"Evaluation '{eval_id}' completed with score "
+                f"{round(current.overall_score * 100, 1)}%, "
+                f"down from {round(previous.overall_score * 100, 1)}% in the previous run "
+                f"'{previous.id}'. Regression threshold: {round(REGRESSION_THRESHOLD * 100)}pp."
+            ),
+            severity=IncidentSeverity.HIGH if drop >= 0.10 else IncidentSeverity.MEDIUM,
+            status=IncidentStatus.OPEN,
+            source="auto",
+        )
+        db.add(incident)
+        db.commit()
+        logger.warning("Eval regression detected for agent %s: %.1f%% drop", agent_name, drop * 100)
+
+        # Send email if configured
+        try:
+            from app.services.email_service import send_email, _alert_html
+            from app.core.config import settings
+            if settings.email_enabled and org and org.members:
+                owner = next((m for m in org.members if m.role == "owner"), org.members[0])
+                if owner and owner.user:
+                    html, text = _alert_html(
+                        alert_name="Automatic Regression Detection",
+                        severity="high" if drop >= 0.10 else "medium",
+                        condition_type="eval_regression",
+                        metric_value=round(current.overall_score * 100, 1),
+                        threshold=round(previous.overall_score * 100, 1),
+                        agent_name=agent_name,
+                        dashboard_url=f"{settings.FRONTEND_URL}/project/{current.agent_id}/evaluations",
+                    )
+                    await send_email(
+                        to=owner.user.email,
+                        subject=f"[Ittiqan] Eval regression — {agent_name}",
+                        html=html,
+                        text=text,
+                    )
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.error("check_eval_regression failed for eval %s: %s", eval_id, exc)
+    finally:
+        db.close()

@@ -541,7 +541,7 @@ def gate1_code():
 
         # Check: form buttons disabled during loading
         submit_buttons = re.findall(r'type="submit"|onClick=\{handle|onClick=\{submit', content)
-        disabled_check = re.findall(r'disabled=\{(?:loading|saving|uploading|starting|deleting|inviting|removing|submitting|acting)', content)
+        disabled_check = re.findall(r'disabled=\{(?:loading|saving|uploading|starting|deleting|inviting|removing|submitting|acting|actionLoading|generating)', content)
         if len(submit_buttons) > 0 and len(disabled_check) == 0:
             record("high", "G1", rel,
                    "Submit/action buttons exist but none has disabled={loading} — allows double-submit",
@@ -573,6 +573,8 @@ def gate2_backend():
             "list_frameworks", "list_available_metrics", "get_supported_models",
             # Agent-facing approval endpoints: auth via org API key (Bearer itq_...), not JWT
             "submit_approval_request", "poll_approval_status", "cancel_request",
+            # Stripe webhook: auth via webhook signature (stripe-signature header), not JWT
+            "stripe_webhook",
         }
         AUTH_INDICATORS = {"get_current_user", "require_role", "ws_get_current_user", "_get_org_by_api_key"}
         if fname != "auth":

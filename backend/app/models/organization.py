@@ -35,6 +35,10 @@ class Organization(Base):
     api_key = Column(String(64), nullable=True, unique=True, index=True)
     api_key_created_at = Column(DateTime, nullable=True)
 
+    # Stripe billing
+    stripe_customer_id = Column(String(100), nullable=True, index=True)
+    stripe_subscription_id = Column(String(100), nullable=True)
+
     # Limits based on plan
     max_agents = Column(Integer, default=3)
     max_evaluations_per_month = Column(Integer, default=100)

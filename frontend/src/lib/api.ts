@@ -407,6 +407,14 @@ export interface ApprovalStats {
   expired: number; cancelled: number; total: number
 }
 
+export const billing = {
+  status: () => request<any>('/billing/status'),
+  checkout: (priceId: string) =>
+    request<{ checkout_url: string }>('/billing/checkout', { method: 'POST', body: JSON.stringify({ price_id: priceId }) }),
+  portal: () =>
+    request<{ portal_url: string }>('/billing/portal', { method: 'POST' }),
+}
+
 export const approvalGateway = {
   queue: (agentId?: string) =>
     request<ApprovalRequest[]>(`/approvals/queue${agentId ? `?agent_id=${agentId}` : ''}`),

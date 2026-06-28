@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { LayoutDashboard, FolderOpen, Box, Users, CreditCard, BarChart2, Zap, ChevronDown, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, Box, Users, CreditCard, BarChart2, Zap, ChevronDown, ShieldCheck, GitCompare } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { approvalGateway } from '../lib/api'
 
@@ -24,6 +24,7 @@ export default function DashboardLayout() {
   const navItems = [
     { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
     { to: '/dashboard/agents', label: 'Agents Registry', icon: FolderOpen },
+    { to: '/dashboard/compare', label: 'Compare Agents', icon: GitCompare },
   ]
   const platformItems = [{ to: '/dashboard/models', label: 'Models', icon: Box }]
   const adminItems = [{ to: '/dashboard/team', label: 'Team & Access', icon: Users }]
