@@ -143,7 +143,7 @@ export default function ConnectAgentPage() {
   const [testResult, setTestResult] = useState<null | 'success' | 'error'>(null)
   const [testTesting, setTestTesting] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [loading, setLoading] = useState(true)
+
   const [saveError, setSaveError] = useState('')
   const [showReview, setShowReview] = useState(false)
 
@@ -152,7 +152,7 @@ export default function ConnectAgentPage() {
       setAvailableProviders(list)
       const def = list.find(p => p.is_default_judge)
       if (def) setLlmJudgeProviderId(def.id)
-    }).catch(console.error).finally(() => setLoading(false))
+    }).catch(console.error)
   }, [])
 
   // Recompute enabled metrics whenever capability/category selection changes.

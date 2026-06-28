@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { security as securityApi, llmProviders, getWsUrl } from '../../lib/api'
 import type { LLMProvider, SecurityAssessment } from '../../types'
-import { Shield, AlertTriangle, ChevronRight, ChevronDown, Play, AlertCircle } from 'lucide-react'
+import { Shield, AlertTriangle, ChevronRight, ChevronDown, AlertCircle } from 'lucide-react'
 
 const FRAMEWORKS: Record<string, { label: string; description: string; icon: string; categories: string[] }> = {
   owasp_llm: {
@@ -47,7 +47,7 @@ const SEVERITY_BADGE: Record<string, string> = {
   info:     'bg-gray-100 text-gray-600 border-gray-200',
 }
 
-type AttackWsMessage = { type: 'progress' | 'completed' | 'failed'; done?: number; total?: number; overall_risk_score?: number; passed_attacks?: number; failed_attacks?: number; error?: string; action?: string }
+type AttackWsMessage = { type: 'progress' | 'completed' | 'failed'; done?: number; total?: number; overall_risk_score?: number; passed_attacks?: number; failed_attacks?: number; error?: string; action?: string; total_attacks?: number; vulnerable_count?: number; risk_score?: number }
 
 function LiveAttack({ assessmentId, onDone }: { assessmentId: string; onDone: (msg: AttackWsMessage) => void }) {
   const [done, setDone] = useState(0)
@@ -160,9 +160,9 @@ export default function SecurityAssessmentsPage() {
     setAssessments(prev => prev.map(a => a.id === id ? {
       ...a,
       status: msg.type === 'completed' ? 'completed' : 'failed',
-      total_attacks: msg.total_attacks,
-      vulnerable_count: msg.vulnerable_count,
-      risk_score: msg.risk_score,
+      total_attacks: msg.total_attacks ?? a.total_attacks,
+      vulnerable_count: msg.vulnerable_count ?? a.vulnerable_count,
+      risk_score: msg.risk_score ?? a.risk_score,
       error_message: msg.error,
     } : a))
   }
@@ -196,11 +196,12 @@ export default function SecurityAssessmentsPage() {
         <div className="space-y-3">
           {assessments.map(a => {
             const badge = STATUS_BADGE[a.status] || STATUS_BADGE.pending
-            const riskColor = a.risk_score >= 0.7 ? 'text-red-600' : a.risk_score >= 0.4 ? 'text-amber-500' : 'text-green-600'
+            const rs = a.risk_score ?? 0
+            const riskColor = rs >= 0.7 ? 'text-red-600' : rs >= 0.4 ? 'text-amber-500' : 'text-green-600'
             return (
               <div key={a.id} className={`bg-white rounded-2xl border transition-all ${expandedId === a.id ? 'border-red-200 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                 <div className="p-5 flex items-center gap-4">
-                  <div className="text-2xl flex-shrink-0">{FRAMEWORKS[a.framework]?.icon || '🛡'}</div>
+                  <div className="text-2xl flex-shrink-0">{(a.framework ? FRAMEWORKS[a.framework]?.icon : null) || '🛡'}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-gray-900 text-sm truncate">{a.name}</h3>

@@ -55,9 +55,19 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Python syntax check
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test
+          SECRET_KEY: deadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000
+          ENCRYPTION_KEY: deadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000
+          GOOGLE_CLIENT_ID: placeholder.apps.googleusercontent.com
         run: python -m py_compile main.py app/routers/*.py app/models/*.py app/core/*.py app/services/*.py
 
       - name: Import check (all routers)
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test
+          SECRET_KEY: deadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000
+          ENCRYPTION_KEY: deadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000
+          GOOGLE_CLIENT_ID: placeholder.apps.googleusercontent.com
         run: |
           python -c "
           import sys; sys.path.insert(0, '.')

@@ -296,7 +296,7 @@ function DatasetCard({ dataset, onDelete, onUpdate }: {
       {showAddCase && (
         <AddCaseDrawer
           datasetId={dataset.id}
-          onDone={updated => { onUpdate(updated); setCases(prev => [...prev, { id: Date.now().toString(), input: '(new)', expected_output: null, retrieval_context: null }]) }}
+          onDone={updated => { onUpdate(updated); setCases(prev => [...prev, { id: Date.now().toString(), input: '(new)', expected_output: undefined, retrieval_context: undefined }]) }}
           onClose={() => setShowAddCase(false)}
         />
       )}

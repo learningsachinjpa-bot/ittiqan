@@ -162,4 +162,7 @@ export interface SecurityAssessment {
   error_action?: string
   created_at: string
   completed_at?: string
+  risk_score?: number
+  vulnerable_count?: number
+  framework?: string
 }

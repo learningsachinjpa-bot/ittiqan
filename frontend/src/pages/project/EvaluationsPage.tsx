@@ -137,9 +137,9 @@ function ResultRow({ result, registry }: { result: EvaluationResult; registry: R
                       </div>
                     )}
                     {/* Failure types */}
-                    {val.failure_types?.length > 0 && (
+                    {(val.failure_types?.length ?? 0) > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {val.failure_types.map((t: string) => (
+                        {(val.failure_types ?? []).map((t: string) => (
                           <span key={t} className="text-xs bg-red-50 text-red-600 border border-red-100 px-1.5 py-0.5 rounded">{t.replace(/_/g, ' ')}</span>
                         ))}
                       </div>
@@ -242,12 +242,12 @@ export default function EvaluationsPage() {
     setEvals(prev => prev.map(e => e.id === evalId ? {
       ...e,
       status: msg.type === 'completed' ? 'completed' : 'failed',
-      overall_score: msg.overall_score,
-      metric_scores: msg.metric_scores,
-      passed_count: msg.passed_count,
-      failed_count: msg.failed_count,
-      error_message: msg.error,
-      error_action: msg.action,
+      overall_score: msg.overall_score ?? e.overall_score,
+      metric_scores: msg.metric_scores ?? e.metric_scores,
+      passed_count: msg.passed_count ?? e.passed_count,
+      failed_count: msg.failed_count ?? e.failed_count,
+      error_message: msg.error ?? e.error_message,
+      error_action: msg.action ?? e.error_action,
     } : e))
   }
 

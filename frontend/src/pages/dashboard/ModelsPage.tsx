@@ -232,7 +232,7 @@ function ProviderCard({ provider, supportedModels, onUpdate, onDelete }: {
       const result = await llmProviders.test(provider.id)
       setTestResult({
         success: result.success,
-        message: result.success ? (result.response?.slice(0, 100) || 'Connected') : result.error,
+        message: result.success ? (result.response?.slice(0, 100) || 'Connected') : (result.error ?? 'Connection failed'),
       })
     } catch (e: any) {
       setTestResult({ success: false, message: e.message })

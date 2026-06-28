@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { evaluations, agents } from '../../lib/api'
-import type { Agent } from '../../types'
-
-interface Evaluation {
-  id: string; name: string; status: string; overall_score?: number
-  total_cases: number; completed_cases: number; failed_cases: number
-  created_at: string; completed_at?: string; metrics: string[]
-}
+import type { Agent, Evaluation } from '../../types'
 
 const STATUS_COLOR: Record<string, string> = {
   completed: 'bg-green-100 text-green-700',
@@ -30,7 +24,7 @@ export default function TestingValidationsPage() {
       evaluations.list(agentId),
     ]).then(([a, e]) => {
       setAgent(a)
-      setEvals(e as Evaluation[])
+      setEvals(e)
     }).finally(() => setLoading(false))
   }, [agentId])
 
@@ -142,7 +136,7 @@ export default function TestingValidationsPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {e.completed_cases}/{e.total_cases}
-                    {e.failed_cases > 0 && <span className="text-red-500 ml-1">({e.failed_cases} failed)</span>}
+                    {(e.failed_count ?? 0) > 0 && <span className="text-red-500 ml-1">({e.failed_count} failed)</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">

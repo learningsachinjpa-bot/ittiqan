@@ -140,7 +140,7 @@ export default function ProjectLayout() {
             <Bell className="w-5 h-5 text-gray-400" />
             <div className="relative">
               <button onClick={() => setShowUser(!showUser)} className="flex items-center gap-2 text-sm text-gray-700">
-                <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs font-medium">{user?.avatar}</div>
+                <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs font-medium">{user?.name?.[0]?.toUpperCase()}</div>
                 <span>{user?.name}</span>
                 <ChevronDown className="w-4 h-4" />
               </button>
