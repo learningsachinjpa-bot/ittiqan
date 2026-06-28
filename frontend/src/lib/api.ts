@@ -295,6 +295,11 @@ export const observability = {
     request<{ id: string }>('/observability/alerts', { method: 'POST', body: JSON.stringify(body) }),
   deleteAlert: (id: string) =>
     request<{ success: boolean }>(`/observability/alerts/${id}`, { method: 'DELETE' }),
+  evaluateAlerts: (agentId?: string) =>
+    request<{ fired_count: number; fired: Array<{ alert_id: string; alert_name: string; condition_type: string; threshold: number; metric_value: number }> }>(
+      `/observability/alerts/evaluate${agentId ? `?agent_id=${agentId}` : ''}`,
+      { method: 'POST' }
+    ),
 }
 
 // ── Reliability ───────────────────────────────────────────────────────────────

@@ -12,10 +12,25 @@ const SEV_COLOR: Record<string, string> = {
 
 const COND_LABELS: Record<string, string> = {
   error_rate: 'Error Rate >',
-  latency_p95: 'P95 Latency >',
-  latency_avg: 'Avg Latency >',
-  cost_per_hour: 'Cost/Hour >',
-  throughput_drop: 'Throughput Drop >',
+  latency_spike: 'Avg Latency >',
+  score_drop: 'Score <',
+}
+
+const COND_UNITS: Record<string, string> = {
+  error_rate: '%',
+  latency_spike: 'ms',
+  score_drop: '',
+}
+
+const COND_HINTS: Record<string, string> = {
+  error_rate: 'Fires when error + timeout % exceeds this value over the last 30 min',
+  latency_spike: 'Fires when average latency_ms exceeds this value over the last 30 min',
+  score_drop: 'Coming soon — will fire when eval score drops below this value',
+}
+
+interface FiredResult {
+  alert_id: string; alert_name: string; condition_type: string
+  threshold: number; metric_value: number
 }
 
 export default function ObservabilityAlertsPage() {
@@ -28,11 +43,18 @@ export default function ObservabilityAlertsPage() {
   const [threshold, setThreshold] = useState('')
   const [severity, setSeverity] = useState('medium')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
+  const [evaluating, setEvaluating] = useState(false)
+  const [evalResult, setEvalResult] = useState<{ fired: FiredResult[]; fired_count: number } | null>(null)
+  const [fetchError, setFetchError] = useState('')
 
   function load() {
     setLoading(true)
-    observability.alerts().then(setAlerts).finally(() => setLoading(false))
+    setFetchError('')
+    observability.alerts()
+      .then(setAlerts)
+      .catch(err => setFetchError(err instanceof Error ? err.message : 'Failed to load alerts'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [])
@@ -41,7 +63,7 @@ export default function ObservabilityAlertsPage() {
     e.preventDefault()
     if (!name.trim() || !threshold) return
     setSubmitting(true)
-    setError('')
+    setFormError('')
     try {
       await observability.createAlert({
         name: name.trim(),
@@ -55,7 +77,7 @@ export default function ObservabilityAlertsPage() {
       setThreshold('')
       load()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create alert')
+      setFormError(err instanceof Error ? err.message : 'Failed to create alert')
     } finally {
       setSubmitting(false)
     }
@@ -67,19 +89,76 @@ export default function ObservabilityAlertsPage() {
     load()
   }
 
+  async function handleEvaluate() {
+    setEvaluating(true)
+    setEvalResult(null)
+    try {
+      const result = await observability.evaluateAlerts(agentId)
+      setEvalResult(result)
+      if (result.fired_count > 0) load() // refresh triggered_count
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Evaluation failed')
+    } finally {
+      setEvaluating(false)
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Alerts</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Threshold-based notifications for this agent</p>
+          <p className="text-sm text-gray-500 mt-0.5">Fires when trace metrics breach a threshold — checked every 5 min</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          + New Alert
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleEvaluate}
+            disabled={evaluating}
+            className="border border-cyan-300 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {evaluating
+              ? <><span className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />Evaluating…</>
+              : '▷ Run Evaluation Now'}
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setFormError('') }}
+            className="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            + New Alert
+          </button>
+        </div>
+      </div>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{fetchError}</div>
+      )}
+
+      {/* Evaluation result banner */}
+      {evalResult !== null && (
+        <div className={`rounded-xl border p-4 ${evalResult.fired_count > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+          {evalResult.fired_count === 0 ? (
+            <p className="text-sm font-medium text-green-700">All clear — no thresholds breached in the last 30 minutes</p>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-red-700 mb-2">{evalResult.fired_count} alert{evalResult.fired_count > 1 ? 's' : ''} fired — incidents created</p>
+              <div className="space-y-1">
+                {evalResult.fired.map(f => (
+                  <div key={f.alert_id} className="text-xs text-red-600 flex gap-2">
+                    <span className="font-medium">{f.alert_name}</span>
+                    <span>—</span>
+                    <span>{COND_LABELS[f.condition_type] ?? f.condition_type} {f.threshold}{COND_UNITS[f.condition_type] ?? ''} · current: {f.metric_value.toFixed(1)}{COND_UNITS[f.condition_type] ?? ''}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* How it works info box */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 space-y-1">
+        <p className="font-semibold">How alerts work</p>
+        <p>The engine evaluates all active alerts every 5 minutes automatically (after health checks). It looks at the last 30 minutes of trace data for this agent. When a threshold is breached, an Incident is created in Reliability → Incidents and any webhook channels are notified. Alerts have a 30-minute cooldown to prevent flooding.</p>
       </div>
 
       {showForm && (
@@ -104,17 +183,21 @@ export default function ObservabilityAlertsPage() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 >
                   {Object.entries(COND_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l.replace(' >', '')}</option>
+                    <option key={v} value={v}>{l.replace(' >', '').replace(' <', '')}</option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-400 mt-1">{COND_HINTS[condType]}</p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Threshold</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Threshold {COND_UNITS[condType] ? `(${COND_UNITS[condType]})` : ''}
+                </label>
                 <input
                   type="number"
+                  min={0}
                   value={threshold}
                   onChange={e => setThreshold(e.target.value)}
-                  placeholder="e.g. 5"
+                  placeholder={condType === 'error_rate' ? 'e.g. 5' : condType === 'latency_spike' ? 'e.g. 2000' : '0.7'}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 />
               </div>
@@ -131,7 +214,7 @@ export default function ObservabilityAlertsPage() {
                 </select>
               </div>
             </div>
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {formError && <p className="text-xs text-red-600">{formError}</p>}
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -153,15 +236,16 @@ export default function ObservabilityAlertsPage() {
       )}
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">Active Alerts</h2>
+          <span className="text-xs text-gray-400">Evaluating every 5 min · 30 min window · 30 min cooldown</span>
         </div>
         {loading ? (
           <div className="p-8 text-center text-gray-400 text-sm">Loading alerts…</div>
         ) : alerts.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 text-sm">No alerts configured</p>
-            <p className="text-gray-400 text-xs mt-1">Create alerts to get notified when thresholds are breached</p>
+            <p className="text-gray-400 text-xs mt-1">Create an alert to get notified when error rate or latency spikes</p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -180,7 +264,7 @@ export default function ObservabilityAlertsPage() {
                 <tr key={a.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
                   <td className="px-4 py-3 text-gray-600">
-                    {COND_LABELS[a.condition_type] ?? a.condition_type} {a.condition_threshold}
+                    {COND_LABELS[a.condition_type] ?? a.condition_type} {a.condition_threshold}{COND_UNITS[a.condition_type] ?? ''}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEV_COLOR[a.severity] ?? 'bg-gray-100 text-gray-600'}`}>

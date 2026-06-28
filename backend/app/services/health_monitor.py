@@ -141,6 +141,16 @@ async def run_health_checks() -> list[dict]:
         for agent in agents:
             result = await check_agent(agent, db)
             results.append(result)
+
+        # Evaluate alerts after all health checks complete
+        try:
+            from app.services.alert_engine import evaluate_alerts
+            fired = await evaluate_alerts()
+            if fired:
+                logger.warning("Alert engine fired %d alerts: %s", len(fired), [a["alert_name"] for a in fired])
+        except Exception as exc:
+            logger.error("Alert engine error: %s", exc)
+
         return results
     except Exception as exc:
         logger.error("Health monitor run failed: %s", exc)

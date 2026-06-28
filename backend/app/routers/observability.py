@@ -229,3 +229,16 @@ async def delete_alert(
     db.delete(a)
     db.commit()
     return {"success": True}
+
+
+@router.post("/alerts/evaluate")
+async def trigger_alert_evaluation(
+    agent_id: Optional[str] = None,
+    user: User = Depends(require_role(*_ADMIN_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Manually trigger alert evaluation for the org (or a specific agent)."""
+    m = get_user_org_member(db, user.id)
+    from app.services.alert_engine import evaluate_alerts
+    fired = await evaluate_alerts(org_id=m.org_id, agent_id=agent_id)
+    return {"fired_count": len(fired), "fired": fired}
