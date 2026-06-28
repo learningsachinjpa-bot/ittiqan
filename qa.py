@@ -433,6 +433,30 @@ def gate0_static():
     else:
         ok("No untyped 'any' found in page files")
 
+    # 0.6 UI layout anti-patterns — catches checkbox/label misalignment bugs
+    print(f"\n{INFO} Scanning for UI layout anti-patterns ...")
+    ui_issues = []
+    tsx_files = glob.glob(str(FRONTEND / "**" / "*.tsx"), recursive=True)
+    for f in tsx_files:
+        if ".qa_backup" in f:
+            continue
+        content = open(f, encoding="utf-8", errors="replace").read()
+        lines = content.splitlines()
+        rel = f.replace(str(ROOT), "").lstrip("/\\")
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            # Raw text node after self-closing input — "<input .../> Some label text"
+            if re.search(r'<input[^>]*/>\s*\w', stripped) and "placeholder" not in stripped:
+                ui_issues.append((rel, i, "Raw text node after <input /> — wrap label text in <span>", stripped[:100]))
+            # justify-between on a flex row that contains a checkbox — pushes checkbox and label to opposite ends
+            if "justify-between" in stripped and "checkbox" in stripped:
+                ui_issues.append((rel, i, "flex justify-between + checkbox on same element — label will appear far from checkbox", stripped[:100]))
+    if ui_issues:
+        for (rel, i, msg, snippet) in ui_issues[:10]:
+            record("high", "G0", f"{rel}:{i}", msg, f"Snippet: {snippet}")
+    else:
+        ok("No UI layout anti-patterns found")
+
 
 # ─────────────────────────────────────────────────────────────
 # GATE 1: Code structure — derived from actual files

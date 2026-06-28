@@ -306,13 +306,22 @@ export default function ConnectAgentPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Enter agent description" rows={4} className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-400 resize-none" />
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-700 mb-2 cursor-pointer">
-              <input type="checkbox" checked={multiTurn} onChange={e => setMultiTurn(e.target.checked)} className="rounded" /> Enable Multi-Turn Metrics
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-              <input type="checkbox" checked={traceMetrics} onChange={e => setTraceMetrics(e.target.checked)} className="rounded" />
-              <span>Enable Trace Metrics <span className="text-gray-400 text-xs">Task Completion, Step Efficiency, Plan Adherence, Plan Quality</span></span>
-            </label>
+            <div className="space-y-2 mt-1">
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
+                <input type="checkbox" checked={multiTurn} onChange={e => setMultiTurn(e.target.checked)} className="mt-0.5 rounded accent-cyan-500" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Enable Multi-Turn Metrics</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Tracks quality across multi-step conversations</p>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 cursor-pointer transition-colors">
+                <input type="checkbox" checked={traceMetrics} onChange={e => setTraceMetrics(e.target.checked)} className="mt-0.5 rounded accent-cyan-500" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Enable Trace Metrics</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Task Completion, Step Efficiency, Plan Adherence, Plan Quality</p>
+                </div>
+              </label>
+            </div>
           </div>
         )}
 
