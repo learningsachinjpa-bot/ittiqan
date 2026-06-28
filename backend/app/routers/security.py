@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Response
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -6,6 +6,7 @@ from datetime import datetime
 import asyncio
 
 from app.core.database import get_db, SessionLocal
+from app.core.limiter import limiter
 from app.core.security import get_current_user, decrypt_secret, ws_get_current_user
 from app.models.user import User
 from app.models.security import SecurityAssessment, SecurityFinding, SecurityFramework, AssessmentStatus, VulnerabilitySeverity
@@ -91,7 +92,8 @@ async def list_assessments(agent_id: Optional[str] = None, user: User = Depends(
     return [assessment_to_dict(a) for a in q.order_by(SecurityAssessment.created_at.desc()).all()]
 
 @router.post("")
-async def create_assessment(req: AssessmentCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+async def create_assessment(request: Request, req: AssessmentCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     org_id = get_user_org_id(db, user.id)
     agent = db.query(Agent).filter(Agent.id == req.agent_id, Agent.org_id == org_id).first()
     if not agent:

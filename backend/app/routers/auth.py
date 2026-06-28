@@ -2,8 +2,7 @@ import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.core.limiter import limiter
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
@@ -20,7 +19,6 @@ from app.models.user import User
 from app.models.organization import Organization, OrgMember, OrgMemberRole, AuditLog
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _GOOGLE_PICTURE_RE = re.compile(r'^https://[a-zA-Z0-9.\-_/]+\.googleusercontent\.com/')

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.security import get_current_user, require_role
 from app.core.config import settings
 from app.models.user import User
@@ -96,6 +97,7 @@ class CheckoutRequest(BaseModel):
 
 
 @router.post("/checkout")
+@limiter.limit("10/minute")
 async def create_checkout(
     request: Request,
     body: CheckoutRequest,
@@ -124,6 +126,7 @@ async def create_checkout(
 
 
 @router.post("/portal")
+@limiter.limit("10/minute")
 async def customer_portal(
     request: Request,
     user: User = Depends(require_role("owner")),

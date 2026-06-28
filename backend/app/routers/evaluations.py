@@ -8,6 +8,7 @@ from datetime import datetime
 import asyncio, json
 
 from app.core.database import get_db, SessionLocal
+from app.core.limiter import limiter
 from app.core.security import get_current_user, decrypt_secret, ws_get_current_user
 from app.models.user import User
 from app.models.evaluation import Evaluation, EvaluationResult, EvaluationStatus
@@ -97,7 +98,8 @@ async def list_evaluations(agent_id: Optional[str] = None, user: User = Depends(
     return [eval_to_dict(e) for e in evals]
 
 @router.post("")
-async def create_and_run_evaluation(req: EvaluationCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+async def create_and_run_evaluation(request: Request, req: EvaluationCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     org_id = get_user_org_id(db, user.id)
     agent = db.query(Agent).filter(Agent.id == req.agent_id, Agent.org_id == org_id).first()
     if not agent:
