@@ -46,6 +46,7 @@ class Evaluation(Base):
     passed_count = Column(Integer, default=0)
     failed_count = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
+    error_action = Column(Text, nullable=True)
 
     # Scheduling
     is_scheduled = Column(Boolean, default=False)

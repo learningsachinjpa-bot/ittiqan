@@ -41,7 +41,7 @@ class Agent(Base):
     default_metrics = Column(JSON, default=list)
     llm_judge_provider = Column(String(50), default="anthropic")
     llm_judge_model = Column(String(100), default="claude-opus-4-5")
-    llm_judge_provider_id = Column(String, ForeignKey("llm_providers.id"), nullable=True)
+    llm_judge_provider_id = Column(String, ForeignKey("llm_providers.id", name="agents_llm_judge_provider_id_fkey", ondelete="SET NULL"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
