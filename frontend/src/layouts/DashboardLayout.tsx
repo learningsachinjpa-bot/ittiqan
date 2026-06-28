@@ -99,7 +99,14 @@ export default function DashboardLayout() {
               className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             >
               <ShieldCheck className="w-4 h-4 opacity-50" />
-              <span>Audit Trail</span>
+              <span>Approval History</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/audit-log"
+              className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+            >
+              <ShieldCheck className="w-4 h-4 opacity-50" />
+              <span>Audit Log</span>
             </NavLink>
           </div>
           <div>

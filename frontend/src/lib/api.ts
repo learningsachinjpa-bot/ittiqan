@@ -120,10 +120,34 @@ export const orgs = {
   members: () => request<OrgMember[]>('/organizations/me/members'),
   invite: (email: string, role: string) =>
     request<OrgMember>('/organizations/me/invite', { method: 'POST', body: JSON.stringify({ email, role }) }),
-  auditLogs: (limit = 50) =>
-    request<{ id: string; action: string; resource_type: string; ip_address: string; created_at: string }[]>(
-      `/organizations/me/audit-logs?limit=${limit}`
-    ),
+  auditLogs: (params?: { action_type?: string; resource_type?: string; since?: string; until?: string; limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.action_type) q.set('action_type', params.action_type)
+    if (params?.resource_type) q.set('resource_type', params.resource_type)
+    if (params?.since) q.set('since', params.since)
+    if (params?.until) q.set('until', params.until)
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    return request<AuditLogPage>(`/organizations/me/audit-logs?${q}`)
+  },
+}
+
+export interface AuditLogEntry {
+  id: string
+  action: string
+  resource_type: string
+  resource_id: string | null
+  details: string | null
+  ip_address: string | null
+  created_at: string
+  user: { id: string; name: string | null; email: string | null; picture: string | null } | null
+}
+
+export interface AuditLogPage {
+  total: number
+  limit: number
+  offset: number
+  items: AuditLogEntry[]
 }
 
 // ── Agents ────────────────────────────────────────────────────────────────────
