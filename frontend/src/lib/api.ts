@@ -130,6 +130,7 @@ export const orgs = {
     if (params?.offset != null) q.set('offset', String(params.offset))
     return request<AuditLogPage>(`/organizations/me/audit-logs?${q}`)
   },
+  usageStats: () => request<UsageStats>('/organizations/me/usage-stats'),
 }
 
 export interface AuditLogEntry {
@@ -148,6 +149,15 @@ export interface AuditLogPage {
   limit: number
   offset: number
   items: AuditLogEntry[]
+}
+
+export interface UsageStats {
+  plan: { name: string; max_agents: number; max_evaluations_per_month: number; max_datasets: number }
+  consumption: { agents: number; datasets: number; evaluations_this_month: number; evaluations_total: number; security_scans: number }
+  traces_30d: { total: number; errors: number; error_rate_pct: number; total_tokens: number; total_cost_usd: number }
+  evals: { completed: number; avg_score: number | null }
+  daily_evals: { date: string; count: number }[]
+  agents: { id: string; name: string; eval_count: number; trace_count_30d: number; avg_score: number | null; last_evaluated_at: string | null }[]
 }
 
 // ── Agents ────────────────────────────────────────────────────────────────────

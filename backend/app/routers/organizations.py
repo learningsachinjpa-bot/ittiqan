@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role, get_client_ip
@@ -216,4 +216,117 @@ async def get_audit_logs(
             }
             for l in logs
         ],
+    }
+
+
+@router.get("/me/usage-stats")
+async def get_usage_stats(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns plan limits, current consumption, cost/token summary,
+    per-agent breakdown, and 30-day daily evaluation counts.
+    """
+    from app.models.agent import Agent
+    from app.models.dataset import Dataset
+    from app.models.evaluation import Evaluation, EvaluationStatus
+    from app.models.observability import Trace
+    from app.models.security import SecurityAssessment
+
+    membership = db.query(OrgMember).filter(OrgMember.user_id == user.id).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="No organization found")
+    org = db.query(Organization).filter(Organization.id == membership.org_id).first()
+
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    thirty_days_ago = now - timedelta(days=30)
+
+    # ── Plan consumption ──────────────────────────────────────────────────────
+    agent_count    = db.query(func.count(Agent.id)).filter(Agent.org_id == org.id).scalar() or 0
+    dataset_count  = db.query(func.count(Dataset.id)).filter(Dataset.org_id == org.id).scalar() or 0
+    eval_this_month = db.query(func.count(Evaluation.id)).filter(
+        Evaluation.org_id == org.id,
+        Evaluation.created_at >= month_start,
+    ).scalar() or 0
+    security_count = db.query(func.count(SecurityAssessment.id)).filter(
+        SecurityAssessment.org_id == org.id
+    ).scalar() or 0
+
+    # ── Trace / cost summary (last 30 days) ───────────────────────────────────
+    traces_30d = db.query(Trace).filter(
+        Trace.org_id == org.id,
+        Trace.timestamp >= thirty_days_ago,
+    ).all()
+    total_traces   = len(traces_30d)
+    total_tokens   = sum((t.tokens_input or 0) + (t.tokens_output or 0) for t in traces_30d)
+    total_cost_usd = round(sum(t.cost_usd or 0 for t in traces_30d), 4)
+    error_traces   = sum(1 for t in traces_30d if str(t.status) in ("error", "TraceStatus.ERROR"))
+
+    # ── Eval summary (all time) ───────────────────────────────────────────────
+    all_evals = db.query(Evaluation).filter(Evaluation.org_id == org.id).all()
+    completed_evals = [e for e in all_evals if e.status == EvaluationStatus.COMPLETED]
+    avg_score = round(
+        sum(e.overall_score for e in completed_evals if e.overall_score is not None)
+        / len(completed_evals), 3
+    ) if completed_evals else None
+
+    # ── Daily eval counts — last 30 days ─────────────────────────────────────
+    daily_evals: List[dict] = []
+    for i in range(30):
+        day = (now - timedelta(days=29 - i)).date()
+        day_start = datetime(day.year, day.month, day.day)
+        day_end   = day_start + timedelta(days=1)
+        count = sum(1 for e in all_evals if day_start <= e.created_at < day_end)
+        daily_evals.append({"date": day.isoformat(), "count": count})
+
+    # ── Per-agent breakdown ───────────────────────────────────────────────────
+    agents = db.query(Agent).filter(Agent.org_id == org.id).all()
+    agent_rows = []
+    for a in agents:
+        agent_evals = [e for e in all_evals if e.agent_id == a.id]
+        agent_traces = [t for t in traces_30d if t.agent_id == a.id]
+        agent_completed = [e for e in agent_evals if e.status == EvaluationStatus.COMPLETED]
+        agent_score = round(
+            sum(e.overall_score for e in agent_completed if e.overall_score is not None)
+            / len(agent_completed), 3
+        ) if agent_completed else None
+        agent_rows.append({
+            "id": a.id,
+            "name": a.name,
+            "eval_count": len(agent_evals),
+            "trace_count_30d": len(agent_traces),
+            "avg_score": agent_score,
+            "last_evaluated_at": a.last_evaluated_at.isoformat() if a.last_evaluated_at else None,
+        })
+    agent_rows.sort(key=lambda r: r["eval_count"], reverse=True)
+
+    return {
+        "plan": {
+            "name": org.plan.value,
+            "max_agents": org.max_agents,
+            "max_evaluations_per_month": org.max_evaluations_per_month,
+            "max_datasets": org.max_datasets,
+        },
+        "consumption": {
+            "agents": agent_count,
+            "datasets": dataset_count,
+            "evaluations_this_month": eval_this_month,
+            "evaluations_total": len(all_evals),
+            "security_scans": security_count,
+        },
+        "traces_30d": {
+            "total": total_traces,
+            "errors": error_traces,
+            "error_rate_pct": round(error_traces / total_traces * 100, 1) if total_traces else 0,
+            "total_tokens": total_tokens,
+            "total_cost_usd": total_cost_usd,
+        },
+        "evals": {
+            "completed": len(completed_evals),
+            "avg_score": avg_score,
+        },
+        "daily_evals": daily_evals,
+        "agents": agent_rows,
     }
